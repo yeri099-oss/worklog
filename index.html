@@ -15,7 +15,7 @@
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
   :root{
-    --paper: #F6F3EC;
+    --paper: #FFFFFF;
     --paper-raised: #FFFFFF;
     --ink: #2B2A26;
     --ink-soft: #6E6A5E;
@@ -78,6 +78,15 @@
     margin-bottom: 16px;
   }
   .date-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .checkin-bar{
+    display:flex; align-items:center; gap:10px; justify-content:space-between;
+    background:var(--amber-soft); border:1px solid var(--amber); color:var(--amber);
+    border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:12px; line-height:1.4;
+  }
+  .checkin-bar button{
+    flex:none; background:var(--amber); color:#fff; border:none; border-radius:8px;
+    padding:8px 12px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap;
+  }
   .date-nav button.arrow{
     width:30px;height:30px;border-radius:50%; border:1px solid var(--rule-strong);
     background:transparent; color:var(--ink); font-size:15px; display:flex;align-items:center;justify-content:center;
@@ -156,6 +165,12 @@
   }
   .entry:last-child{ border-bottom:none; }
   .entry:active{ background: rgba(219,213,196,.25); }
+  .entry.dragging{ opacity:.4; }
+  .drag-handle{
+    flex:none; width:20px; display:flex; align-items:center; justify-content:center;
+    color:var(--rule-strong); font-size:13px; cursor:grab; user-select:none;
+  }
+  .drag-handle:active{ cursor:grabbing; }
   .entry .cat{
     flex:none; width:72px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -348,6 +363,10 @@
 <main>
 <div id="tabWorklog">
   <div class="add-card">
+    <div class="checkin-bar" id="checkinBar" style="display:none;">
+      <span>☀️ 오늘 첫 업무일지네요 — 리뷰현황·은행거래내역·메일 확인을 자동으로 추가할까요?</span>
+      <button id="checkinBtn">출근 · 반복업무 추가</button>
+    </div>
     <div class="date-nav">
       <button class="arrow" id="prevDay">‹</button>
       <div class="date-label">
@@ -538,10 +557,55 @@ function renderDateLabel(){
   document.getElementById('labelDate').textContent = day + '일';
   document.getElementById('labelWeekday').textContent = '('+wd+')' + (selectedDate===todayStr() ? ' · 오늘' : '');
   datePicker.value = selectedDate;
+  updateCheckinBar();
 }
 document.getElementById('prevDay').onclick = ()=>{ selectedDate = shiftDate(selectedDate,-1); renderDateLabel(); };
 document.getElementById('nextDay').onclick = ()=>{ selectedDate = shiftDate(selectedDate,1); renderDateLabel(); };
 datePicker.onchange = ()=>{ selectedDate = datePicker.value; renderDateLabel(); };
+
+/* ============ Check-in (recurring daily tasks) ============ */
+const RECURRING_TASKS = ['리뷰현황','은행거래내역','메일'];
+function updateCheckinBar(){
+  const bar = document.getElementById('checkinBar');
+  if(!bar) return;
+  if(selectedDate !== todayStr()){ bar.style.display = 'none'; return; }
+  const todays = allEntries.filter(e=>e.date===selectedDate);
+  const hasAll = RECURRING_TASKS.every(cat => todays.some(e=>e.category===cat));
+  bar.style.display = hasAll ? 'none' : 'flex';
+}
+document.getElementById('checkinBtn').onclick = async ()=>{
+  const btn = document.getElementById('checkinBtn');
+  btn.disabled = true; btn.textContent = '추가 중…';
+  try{
+    const yesterday = shiftDate(selectedDate, -1);
+    const {month: ym, day: yd} = fmtLabel(yesterday);
+    const mmdd = `${String(ym).padStart(2,'0')}/${String(yd).padStart(2,'0')}`;
+    const base = Date.now();
+    const items = [
+      { category:'리뷰현황', content:`~${mmdd} 리뷰현황 확인`, note:'완료' },
+      { category:'은행거래내역', content:`~${mmdd}`, note:'완료' },
+      { category:'메일', content:'네이버, 다음계정 메일 확인', note:'완료' }
+    ];
+    const batch = db.batch();
+    items.forEach((it, idx)=>{
+      const ref = ENTRIES.doc();
+      batch.set(ref, {
+        date: selectedDate,
+        category: it.category,
+        content: it.content,
+        note: it.note,
+        seq: base + idx,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await batch.commit();
+    logAction('출근 반복업무 추가', selectedDate);
+  }catch(err){
+    alert('추가에 실패했습니다: ' + err.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '출근 · 반복업무 추가';
+  }
+};
 renderDateLabel();
 
 /* ============ Categories ============ */
@@ -661,21 +725,13 @@ document.getElementById('addBtn').onclick = async ()=>{
 ENTRIES.orderBy('date','desc').onSnapshot(snap=>{
   allEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
   renderList();
+  updateCheckinBar();
 }, err=>{
   document.getElementById('listWrap').innerHTML = `<div class="empty-state"><p>불러오기에 실패했습니다.</p><p style="font-size:11px;">${escapeHtml(err.message)}</p></div>`;
 });
 
-function statusPriority(note){
-  if(note === '진행중') return 0;
-  if(note === '완료') return 2;
-  return 1; // 대기중 및 그 외 직접입력, 빈값
-}
 function sortEntries(list){
-  return list.slice().sort((a,b)=>{
-    const pa = statusPriority(a.note), pb = statusPriority(b.note);
-    if(pa !== pb) return pa - pb;
-    return (a.seq||0) - (b.seq||0);
-  });
+  return list.slice().sort((a,b)=> (a.seq||0) - (b.seq||0));
 }
 function noteClass(note){
   return note==='완료' ? 'done' : note==='진행중' ? 'progress' : note==='대기중' ? 'wait' : '';
@@ -793,6 +849,7 @@ function renderList(){
       const cls = noteClass(note);
       return `
         <div class="entry" data-id="${e.id}">
+          <span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>
           <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line">${escapeHtml(e.content)}</span>
           <span class="note-col">${note ? `<span class="note-tag ${cls}">${escapeHtml(note)}</span>` : ''}</span>
@@ -805,17 +862,76 @@ function renderList(){
           <span class="wd">${wd}요일</span>
           <span class="ym">${month}월</span>
         </div>
-        ${rows}
+        <div class="day-entries" data-date="${dateStr}">
+          ${rows}
+        </div>
       </div>`;
   }).join('');
 }
 updateMonthBtnLabel();
 
 document.getElementById('listWrap').addEventListener('click', (e)=>{
+  if(e.target.closest('.drag-handle')) return;
   const row = e.target.closest('.entry');
   if(!row) return;
   openEdit(row.dataset.id);
 });
+
+/* ============ Drag to reorder (mouse) ============ */
+let dragSrcId = null;
+let dragSrcDate = null;
+
+document.getElementById('listWrap').addEventListener('dragstart', (e)=>{
+  const handle = e.target.closest('.drag-handle');
+  if(!handle || listMode !== 'month'){ e.preventDefault(); return; }
+  const row = handle.closest('.entry');
+  const container = row.closest('.day-entries');
+  dragSrcId = row.dataset.id;
+  dragSrcDate = container ? container.dataset.date : null;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', dragSrcId);
+  row.classList.add('dragging');
+});
+document.getElementById('listWrap').addEventListener('dragend', (e)=>{
+  const row = e.target.closest('.entry');
+  if(row) row.classList.remove('dragging');
+  if(dragSrcDate) persistOrder(dragSrcDate);
+  dragSrcId = null; dragSrcDate = null;
+});
+document.getElementById('listWrap').addEventListener('dragover', (e)=>{
+  if(!dragSrcId) return;
+  const row = e.target.closest('.entry');
+  if(!row || row.dataset.id === dragSrcId) return;
+  const container = row.closest('.day-entries');
+  if(!container || container.dataset.date !== dragSrcDate) return;
+  e.preventDefault();
+  const dragEl = container.querySelector(`.entry[data-id="${dragSrcId}"]`);
+  if(!dragEl) return;
+  const rect = row.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height/2;
+  if(before) container.insertBefore(dragEl, row);
+  else container.insertBefore(dragEl, row.nextSibling);
+});
+document.getElementById('listWrap').addEventListener('drop', (e)=>{ e.preventDefault(); });
+
+async function persistOrder(dateStr){
+  const container = document.querySelector(`.day-entries[data-date="${dateStr}"]`);
+  if(!container) return;
+  const rows = [...container.querySelectorAll('.entry')];
+  const base = Date.now() - rows.length;
+  const batch = db.batch();
+  rows.forEach((row, idx)=>{
+    const id = row.dataset.id;
+    const newSeq = base + idx;
+    const entry = allEntries.find(x=>x.id===id);
+    if(entry) entry.seq = newSeq;
+    batch.update(ENTRIES.doc(id), { seq: newSeq });
+  });
+  try{
+    await batch.commit();
+    logAction('업무일지 순서 변경', dateStr);
+  }catch(err){ console.error('순서 저장 실패', err); }
+}
 
 /* ============ Edit modal ============ */
 function openEdit(id){
