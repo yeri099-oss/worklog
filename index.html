@@ -890,13 +890,13 @@ function renderList(){
         </div>
       </div>`;
   }).join('');
-  equalizeColumnWidth('#listWrap .cat');
+  equalizeColumnWidth('#listWrap .cat', 16);
 }
-function equalizeColumnWidth(selector){
+function equalizeColumnWidth(selector, buffer){
   const cells = [...document.querySelectorAll(selector)];
   if(!cells.length) return;
   cells.forEach(c=>{ c.style.width = 'max-content'; });
-  const maxW = Math.max(...cells.map(c=>c.offsetWidth));
+  const maxW = Math.max(...cells.map(c=>c.offsetWidth)) + (buffer || 0);
   cells.forEach(c=>{ c.style.width = maxW + 'px'; });
 }
 updateMonthBtnLabel();
@@ -1035,7 +1035,7 @@ function buildReport(){
         </div>`;
     }).join('');
   }
-  equalizeColumnWidth('#reportCaptureBody .rc-cat');
+  equalizeColumnWidth('#reportCaptureBody .rc-cat', 14);
 }
 
 function showToast(msg){
