@@ -9,6 +9,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F6F3EC">
 <title>업무일지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Pretendard-Regular:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
   :root{
     --paper: #FFFFFF;
@@ -32,11 +36,11 @@
     background-image:
       linear-gradient(var(--paper) 0%, var(--paper) 100%);
     color: var(--ink);
-    font-family: '맑은 고딕', 'Malgun Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Pretendard-Regular','Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
     padding-bottom: 48px;
   }
-  .serif{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; }
+  .serif{ font-family:'Noto Serif KR',serif; }
 
   /* ===== Header ===== */
   header.app-header{
@@ -51,18 +55,18 @@
     width:30px; height:30px; border-radius:50%;
     border:1.6px solid var(--seal); color:var(--seal);
     display:flex; align-items:center; justify-content:center;
-    font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-weight:900; font-size:13px;
+    font-family:'Noto Serif KR',serif; font-weight:900; font-size:13px;
     transform: rotate(-8deg);
     flex:none;
   }
-  .brand h1{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-weight:900; font-size:19px; margin:0; letter-spacing:-.2px;}
+  .brand h1{ font-family:'Noto Serif KR',serif; font-weight:900; font-size:19px; margin:0; letter-spacing:-.2px;}
   .sync-dot{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-soft); }
   .sync-dot i{ width:6px; height:6px; border-radius:50%; background:#8FA876; display:inline-block; }
   .sync-dot.off i{ background:#C7BFA8; }
   .header-sub{ margin-top:2px; font-size:12px; color:var(--ink-soft); }
 
   /* ===== Layout ===== */
-  main{ max-width: 640px; margin: 0 auto; padding: 14px 14px 0; }
+  main{ max-width: 100%; margin: 0; padding: 14px 28px 0; }
 
   /* ===== Quick add card ===== */
   .add-card{
@@ -90,7 +94,7 @@
   }
   .date-nav button.arrow:active{ background: var(--rule); }
   .date-label{ text-align:center; }
-  .date-label .d{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-weight:700; font-size:16px; }
+  .date-label .d{ font-family:'Noto Serif KR',serif; font-weight:700; font-size:16px; }
   .date-label .w{ font-size:11px; color:var(--ink-soft); margin-left:4px; }
   .date-label input[type=date]{
     display:block; margin:2px auto 0; font-size:11px; color:var(--ink-soft);
@@ -161,7 +165,7 @@
     border-bottom: 1px solid var(--rule-strong);
     margin-bottom: 8px;
   }
-  .day-head .num{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-weight:900; font-size:20px; }
+  .day-head .num{ font-family:'Noto Serif KR',serif; font-weight:900; font-size:20px; }
   .day-head .wd{ font-size:12px; color:var(--ink-soft); }
   .day-head .ym{ margin-left:auto; font-size:11px; color:var(--ink-soft); }
 
@@ -178,13 +182,13 @@
   }
   .drag-handle:active{ cursor:grabbing; }
   .entry .cat{
-    flex:none; width:72px; font-size:15px; font-weight:600; color:var(--ink-soft);
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    flex:none; width:72px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
+    white-space:normal; word-break:break-word; overflow-wrap:anywhere;
     border-right:1.5px solid var(--rule-strong);
     padding:9px 8px; display:flex; align-items:center; justify-content:center; text-align:center;
   }
   .entry .content-line{
-    flex:1; min-width:0; font-size:13px; line-height:1.5; color:var(--ink);
+    flex:1; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink);
     white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;
     border-right:1.5px solid var(--rule-strong);
     padding:9px 10px; display:flex; align-items:center; justify-content:center; text-align:center;
@@ -194,7 +198,7 @@
   }
   .entry .note-tag{
     font-size:10.5px; padding:3px 9px; border-radius:999px; border:1px solid var(--rule-strong);
-    font-weight:600; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-weight:600; max-width:100%; white-space:normal; word-break:break-word; overflow-wrap:anywhere;
     color:var(--ink-soft); background:var(--paper); text-align:center;
   }
   .note-tag.done{ background:var(--seal-soft); color:var(--seal); border-color:var(--seal); }
@@ -204,14 +208,14 @@
   .empty-state{
     text-align:center; padding: 40px 20px; color: var(--ink-soft);
   }
-  .empty-state .mark{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-size:26px; color:var(--rule-strong); margin-bottom:8px; }
+  .empty-state .mark{ font-family:'Noto Serif KR',serif; font-size:26px; color:var(--rule-strong); margin-bottom:8px; }
   .empty-state p{ font-size:13px; margin:2px 0; }
 
   /* ===== Month select / Search / Filter bar ===== */
   .month-select-wrap{ position:relative; margin-bottom:10px; }
   .month-select-btn{
-    font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-weight:700; font-size:16px; background:none; border:none;
-    color:var(--ink); cursor:pointer; padding:2px 0; font-family:'맑은 고딕','Malgun Gothic',sans-serif;
+    font-family:'Noto Serif KR',serif; font-weight:700; font-size:16px; background:none; border:none;
+    color:var(--ink); cursor:pointer; padding:2px 0; font-family:'Noto Serif KR',serif;
   }
   .month-dropdown{
     position:absolute; top:30px; left:0; background:#fff; border:1px solid var(--rule-strong);
@@ -261,7 +265,7 @@
     border-radius:16px; max-height:82vh; animation: pop .18s ease-out;
   }
   @keyframes pop{ from{ transform:scale(.94); opacity:0;} to{ transform:scale(1); opacity:1;} }
-  .sheet h3{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-size:16px; margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;}
+  .sheet h3{ font-family:'Noto Serif KR',serif; font-size:16px; margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;}
   .sheet h3 .x{ font-size:13px; color:var(--ink-soft); font-weight:400; cursor:pointer; }
   .sheet .row-btns{ display:flex; gap:8px; margin-top:14px; }
   .sheet .row-btns button{ flex:1; padding:11px; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; border:1px solid var(--rule-strong); background:transparent; color:var(--ink);}
@@ -273,15 +277,15 @@
     background:#fff; border:1px solid var(--rule); border-radius:12px; padding:16px;
   }
   .report-capture-title{
-    font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-weight:700; font-size:15px; margin-bottom:10px;
+    font-family:'Noto Serif KR',serif; font-weight:700; font-size:15px; margin-bottom:10px;
     padding-bottom:9px; border-bottom:1px solid var(--rule-strong); color:var(--ink);
   }
   .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:12.5px; }
   .rc-row:last-child{ border-bottom:none; }
-  .rc-row .rc-cat{ flex:none; width:66px; font-weight:600; color:var(--ink-soft); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-right:1.5px solid var(--rule-strong); padding:7px 6px; display:flex; align-items:center; justify-content:center; text-align:center; }
-  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); font-size:11.5px; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .rc-row .rc-cat{ flex:none; width:66px; font-weight:600; color:var(--ink-soft); font-size:11px; white-space:normal; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 6px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-note-col{ flex:none; width:60px; padding:7px 4px; display:flex; align-items:center; justify-content:center; text-align:center; }
-  .rc-row .rc-note{ font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rc-row .rc-note{ font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; text-align:center; max-width:100%; white-space:normal; word-break:break-word; overflow-wrap:anywhere; }
   .rc-empty{ text-align:center; color:var(--ink-soft); font-size:12.5px; padding:20px 0; }
   .copied-toast{
     position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
@@ -298,7 +302,7 @@
   }
   .login-box{ width:100%; max-width:340px; }
   .login-box .brand-mark{ margin:0 auto 14px; }
-  .login-box h2{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; text-align:center; font-size:19px; margin:0 0 4px; }
+  .login-box h2{ font-family:'Noto Serif KR',serif; text-align:center; font-size:19px; margin:0 0 4px; }
   .login-box .sub{ text-align:center; font-size:12px; color:var(--ink-soft); margin-bottom:22px; }
   .login-box .field{ margin-bottom:10px; }
   .login-box .add-btn{ margin-top:6px; }
@@ -315,7 +319,7 @@
 
   /* ===== Settings ===== */
   .settings-card{ background:var(--paper-raised); border:1px solid var(--rule); border-radius:14px; box-shadow:var(--shadow); padding:14px; margin-bottom:16px; }
-  .settings-card h4{ font-family:'맑은 고딕','Malgun Gothic',sans-serif; font-size:14px; margin:0 0 12px; }
+  .settings-card h4{ font-family:'Noto Serif KR',serif; font-size:14px; margin:0 0 12px; }
   .acct-row{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
   .acct-row:last-child{ border-bottom:none; }
   .acct-row .id{ font-weight:600; }
