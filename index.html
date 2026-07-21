@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="업무일지">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#F6F3EC">
+<meta name="theme-color" content="#FFFFFF">
 <title>업무일지</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,17 +17,17 @@
   :root{
     --paper: #FFFFFF;
     --paper-raised: #FFFFFF;
-    --ink: #2B2A26;
-    --ink-soft: #6E6A5E;
-    --rule: #DBD5C4;
-    --rule-strong: #C7BFA8;
-    --seal: #B3341F;
-    --seal-soft: #F1DDD6;
-    --amber: #A9761F;
-    --amber-soft: #F3E7D0;
-    --slate: #5B6470;
-    --slate-soft: #E4E7EA;
-    --shadow: 0 1px 2px rgba(43,42,38,.06), 0 6px 20px rgba(43,42,38,.05);
+    --ink: #1F2328;
+    --ink-soft: #6B7280;
+    --rule: #E5E7EB;
+    --rule-strong: #CBD2D9;
+    --seal: #2563EB;
+    --seal-soft: #DBEAFE;
+    --amber: #D97706;
+    --amber-soft: #FEF3C7;
+    --slate: #64748B;
+    --slate-soft: #EEF1F4;
+    --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 20px rgba(31,35,40,.06);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
   html,body{margin:0; padding:0;}
@@ -62,7 +62,7 @@
   .brand h1{ font-family:'Noto Serif KR',serif; font-weight:900; font-size:19px; margin:0; letter-spacing:-.2px;}
   .sync-dot{ display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ink-soft); }
   .sync-dot i{ width:6px; height:6px; border-radius:50%; background:#8FA876; display:inline-block; }
-  .sync-dot.off i{ background:#C7BFA8; }
+  .sync-dot.off i{ background:var(--rule-strong); }
   .header-sub{ margin-top:2px; font-size:12px; color:var(--ink-soft); }
 
   /* ===== Layout ===== */
@@ -174,7 +174,7 @@
     cursor:pointer;
   }
   .entry:last-child{ border-bottom:none; }
-  .entry:active{ background: rgba(219,213,196,.25); }
+  .entry:active{ background: rgba(203,210,217,.25); }
   .entry.dragging{ opacity:.4; }
   .drag-handle{
     flex:none; width:20px; display:flex; align-items:center; justify-content:center;
@@ -182,10 +182,10 @@
   }
   .drag-handle:active{ cursor:grabbing; }
   .entry .cat{
-    flex:none; width:72px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
-    white-space:normal; word-break:break-word; overflow-wrap:anywhere;
+    flex:none; width:auto; min-width:64px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
+    white-space:nowrap; overflow:visible;
     border-right:1.5px solid var(--rule-strong);
-    padding:9px 8px; display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:9px 10px; display:flex; align-items:center; justify-content:center; text-align:center;
   }
   .entry .content-line{
     flex:1; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink);
@@ -282,7 +282,7 @@
   }
   .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:12.5px; }
   .rc-row:last-child{ border-bottom:none; }
-  .rc-row .rc-cat{ flex:none; width:66px; font-weight:600; color:var(--ink-soft); font-size:11px; white-space:normal; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 6px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink-soft); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-note-col{ flex:none; width:60px; padding:7px 4px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-note{ font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; text-align:center; max-width:100%; white-space:normal; word-break:break-word; overflow-wrap:anywhere; }
@@ -890,6 +890,14 @@ function renderList(){
         </div>
       </div>`;
   }).join('');
+  equalizeColumnWidth('#listWrap .cat');
+}
+function equalizeColumnWidth(selector){
+  const cells = [...document.querySelectorAll(selector)];
+  if(!cells.length) return;
+  cells.forEach(c=>{ c.style.width = 'max-content'; });
+  const maxW = Math.max(...cells.map(c=>c.offsetWidth));
+  cells.forEach(c=>{ c.style.width = maxW + 'px'; });
 }
 updateMonthBtnLabel();
 
@@ -1027,6 +1035,7 @@ function buildReport(){
         </div>`;
     }).join('');
   }
+  equalizeColumnWidth('#reportCaptureBody .rc-cat');
 }
 
 function showToast(msg){
