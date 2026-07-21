@@ -151,23 +151,30 @@
   .day-head .ym{ margin-left:auto; font-size:11px; color:var(--ink-soft); }
 
   .entry{
-    display:flex; align-items:center; gap:8px; padding:9px 4px; border-bottom: 1px dashed var(--rule);
+    display:flex; align-items:stretch; border-bottom: 1px dashed var(--rule);
     cursor:pointer;
   }
   .entry:last-child{ border-bottom:none; }
-  .entry:active{ background: rgba(219,213,196,.25); border-radius:6px; }
+  .entry:active{ background: rgba(219,213,196,.25); }
   .entry .cat{
-    flex:none; width:76px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
+    flex:none; width:72px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    border-right:1.5px solid var(--rule-strong);
+    padding:9px 8px; display:flex; align-items:center;
   }
   .entry .content-line{
-    flex:1; min-width:0; font-size:13.5px; line-height:1.4;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    flex:1; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink);
+    white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;
+    border-right:1.5px solid var(--rule-strong);
+    padding:9px 10px; display:flex; align-items:center;
+  }
+  .entry .note-col{
+    flex:none; width:68px; padding:9px 6px; display:flex; align-items:center; justify-content:center;
   }
   .entry .note-tag{
-    flex:none; font-size:10.5px; padding:2px 8px; border-radius:999px; border:1px solid var(--rule-strong);
-    font-weight:600; max-width:112px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    color:var(--ink-soft); background:var(--paper);
+    font-size:10.5px; padding:3px 9px; border-radius:999px; border:1px solid var(--rule-strong);
+    font-weight:600; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    color:var(--ink-soft); background:var(--paper); text-align:center;
   }
   .note-tag.done{ background:var(--seal-soft); color:var(--seal); border-color:var(--seal); }
   .note-tag.progress{ background:var(--amber-soft); color:var(--amber); border-color:var(--amber); }
@@ -248,11 +255,12 @@
     font-family:'Noto Serif KR',serif; font-weight:700; font-size:15px; margin-bottom:10px;
     padding-bottom:9px; border-bottom:1px solid var(--rule-strong); color:var(--ink);
   }
-  .rc-row{ display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px dashed var(--rule); font-size:12.5px; }
+  .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:12.5px; }
   .rc-row:last-child{ border-bottom:none; }
-  .rc-row .rc-cat{ flex:none; width:72px; font-weight:600; color:var(--ink-soft); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .rc-row .rc-note{ flex:none; font-size:10px; padding:2px 8px; border-radius:999px; font-weight:600; }
+  .rc-row .rc-cat{ flex:none; width:66px; font-weight:600; color:var(--ink-soft); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-right:1.5px solid var(--rule-strong); padding:7px 6px; display:flex; align-items:center; }
+  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; }
+  .rc-row .rc-note-col{ flex:none; width:60px; padding:7px 4px; display:flex; align-items:center; justify-content:center; }
+  .rc-row .rc-note{ font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .rc-empty{ text-align:center; color:var(--ink-soft); font-size:12.5px; padding:20px 0; }
   .copied-toast{
     position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
@@ -431,6 +439,11 @@
     <label class="field-label">내용</label>
     <div class="field"><textarea id="editContent"></textarea></div>
     <label class="field-label">비고</label>
+    <div class="status-row" id="editStatusRow">
+      <div class="status-chip" data-v="완료">완료</div>
+      <div class="status-chip" data-v="진행중">진행중</div>
+      <div class="status-chip" data-v="대기중">대기중</div>
+    </div>
     <div class="field"><input type="text" id="editNote"></div>
     <div class="row-btns">
       <button class="danger" id="editDelete">삭제</button>
@@ -560,7 +573,7 @@ function rememberCategory(cat){
   META.set({ list: categories.slice(0,40) }, {merge:true}).catch(()=>{});
 }
 
-/* ============ Status chips ============ */
+/* ============ Status chips (add-card) ============ */
 document.getElementById('statusRow').addEventListener('click', (e)=>{
   const chip = e.target.closest('.status-chip');
   if(!chip) return;
@@ -576,10 +589,34 @@ document.getElementById('noteInput').addEventListener('input', (e)=>{
   syncStatusChips();
 });
 function syncStatusChips(){
-  [...document.querySelectorAll('.status-chip')].forEach(c=>{
+  [...document.querySelectorAll('#statusRow .status-chip')].forEach(c=>{
     c.classList.remove('sel-done','sel-progress','sel-wait');
     if(c.dataset.v === selectedStatus){
       c.classList.add(selectedStatus==='완료'?'sel-done':selectedStatus==='진행중'?'sel-progress':'sel-wait');
+    }
+  });
+}
+
+/* ============ Status chips (edit modal) ============ */
+let editSelectedStatus = '';
+document.getElementById('editStatusRow').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.status-chip');
+  if(!chip) return;
+  const v = chip.dataset.v;
+  editSelectedStatus = (editSelectedStatus === v) ? '' : v;
+  document.getElementById('editNote').value = editSelectedStatus;
+  syncEditStatusChips();
+});
+document.getElementById('editNote').addEventListener('input', (e)=>{
+  const v = e.target.value.trim();
+  editSelectedStatus = (v==='완료'||v==='진행중'||v==='대기중') ? v : '';
+  syncEditStatusChips();
+});
+function syncEditStatusChips(){
+  [...document.querySelectorAll('#editStatusRow .status-chip')].forEach(c=>{
+    c.classList.remove('sel-done','sel-progress','sel-wait');
+    if(c.dataset.v === editSelectedStatus){
+      c.classList.add(editSelectedStatus==='완료'?'sel-done':editSelectedStatus==='진행중'?'sel-progress':'sel-wait');
     }
   });
 }
@@ -758,7 +795,7 @@ function renderList(){
         <div class="entry" data-id="${e.id}">
           <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line">${escapeHtml(e.content)}</span>
-          ${note ? `<span class="note-tag ${cls}">${escapeHtml(note)}</span>` : ''}
+          <span class="note-col">${note ? `<span class="note-tag ${cls}">${escapeHtml(note)}</span>` : ''}</span>
         </div>`;
     }).join('');
     return `
@@ -787,7 +824,10 @@ function openEdit(id){
   editingId = id;
   document.getElementById('editCat').value = e.category;
   document.getElementById('editContent').value = e.content;
-  document.getElementById('editNote').value = e.note || '';
+  const note = e.note || '';
+  document.getElementById('editNote').value = note;
+  editSelectedStatus = (note==='완료'||note==='진행중'||note==='대기중') ? note : '';
+  syncEditStatusChips();
   document.getElementById('editOverlay').classList.add('open');
 }
 document.getElementById('editClose').onclick = ()=>{ document.getElementById('editOverlay').classList.remove('open'); };
@@ -844,7 +884,7 @@ function buildReport(){
         <div class="rc-row">
           <span class="rc-cat">${escapeHtml(e.category)}</span>
           <span class="rc-content">${escapeHtml(e.content)}</span>
-          ${note ? `<span class="rc-note note-tag ${noteClass(note)}">${escapeHtml(note)}</span>` : ''}
+          <span class="rc-note-col">${note ? `<span class="rc-note note-tag ${noteClass(note)}">${escapeHtml(note)}</span>` : ''}</span>
         </div>`;
     }).join('');
   }
