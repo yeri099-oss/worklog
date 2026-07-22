@@ -978,7 +978,10 @@ function syncRowColumns(rows, opts){
   let maxNatural = 0;
   contentCells.forEach(c=>{
     const cs = getComputedStyle(c);
-    probe.style.font = cs.font;
+    probe.style.fontFamily = cs.fontFamily;
+    probe.style.fontSize = cs.fontSize;
+    probe.style.fontWeight = cs.fontWeight;
+    probe.style.fontStyle = cs.fontStyle;
     probe.style.letterSpacing = cs.letterSpacing;
     (c.textContent || '').split('\n').forEach(line=>{
       probe.textContent = line.length ? line : ' ';
@@ -994,9 +997,9 @@ function syncRowColumns(rows, opts){
     const h = sample.querySelector(opts.handleSel);
     if(h) usedW += h.getBoundingClientRect().width;
   }
-  usedW += 4; // border widths between columns
+  usedW += 6; // border widths between columns
   const cap = Math.max(80, rowW - usedW);
-  const finalW = Math.min(maxNatural + 6, cap);
+  const finalW = Math.min(maxNatural + 14, cap);
   contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = finalW + 'px'; });
 }
 function syncAllDayColumns(){
@@ -1007,6 +1010,9 @@ function syncAllDayColumns(){
       catBuffer:26, noteBuffer:14
     });
   });
+}
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(()=>{ syncAllDayColumns(); });
 }
 window.addEventListener('resize', ()=>{
   clearTimeout(window.__resizeT);
