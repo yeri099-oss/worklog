@@ -550,6 +550,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
@@ -564,10 +565,13 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 const ENTRIES = db.collection('workLogApp_entries');
 const META = db.collection('workLogApp_meta').doc('categories');
-const ACCOUNTS = db.collection('workLogApp_accounts');
+const PROFILES = db.collection('workLogApp_profiles');
 const LOGS = db.collection('workLogApp_logs');
+const PSEUDO_DOMAIN = '@worklog-app.local';
+function toPseudoEmail(username){ return username.toLowerCase() + PSEUDO_DOMAIN; }
 
 const syncDot = document.getElementById('syncDot');
 const syncText = document.getElementById('syncText');
@@ -1390,9 +1394,9 @@ function escapeAttr(s){ return escapeHtml(s); }
 
 updateCategoryList();
 
-/* ============ Auth ============ */
-let currentUser = null; // {id, role}
-const SESSION_KEY = 'workLogApp_session';
+/* ============ Auth (Firebase Authentication) ============ */
+let currentUser = null; // {uid, id, role}
+let bootstrapping = true;
 
 function logAction(action, detail){
   if(!currentUser) return;
@@ -1405,44 +1409,44 @@ function logAction(action, detail){
   }).catch(()=>{});
 }
 
-async function ensureDefaultAdmin(){
+async function ensureBootstrapAdmin(){
   try{
-    const snap = await ACCOUNTS.limit(1).get();
-    if(snap.empty){
-      await ACCOUNTS.doc('admin').set({ id:'admin', password:'1234', role:'admin' });
+    const snap = await PROFILES.limit(1).get();
+    if(!snap.empty) return;
+    const secondary = firebase.initializeApp(firebaseConfig, 'bootstrap-' + Date.now());
+    try{
+      const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail('admin'), '1234');
+      await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id:'admin', role:'admin' });
+      await secondary.auth().signOut();
+    }catch(e){ /* 이미 만들어져 있거나 오프라인이면 무시 */ }
+    try{ await secondary.delete(); }catch(e){}
+  }catch(e){ /* offline: 로그인 시도할 때 오류로 안내됨 */ }
+}
+
+auth.onAuthStateChanged(async (user)=>{
+  if(bootstrapping) return; // 부트스트랩 끝나기 전에는 무시 (아래 boot 절차에서 처리)
+  if(!user){ currentUser = null; showLogin(); return; }
+  try{
+    const doc = await PROFILES.doc(user.uid).get();
+    if(!doc.exists){
+      // 프로필이 삭제된(=비활성화된) 계정
+      await auth.signOut();
+      showLogin('이 계정은 더 이상 사용할 수 없습니다.');
+      return;
     }
-  }catch(e){ /* offline: login screen will just show a connection error on attempt */ }
-}
+    currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role };
+    enterApp();
+  }catch(e){
+    showLogin('로그인 확인에 실패했습니다: ' + e.message);
+  }
+});
 
-function loadSession(){
-  try{
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
-}
-function saveSession(u){ localStorage.setItem(SESSION_KEY, JSON.stringify(u)); }
-function clearSession(){ localStorage.removeItem(SESSION_KEY); }
-
-async function tryAutoLogin(){
-  const sess = loadSession();
-  if(!sess){ showLogin(); return; }
-  try{
-    const doc = await ACCOUNTS.doc(sess.id).get();
-    if(doc.exists){
-      currentUser = { id: sess.id, role: doc.data().role };
-      enterApp();
-    } else {
-      clearSession(); showLogin();
-    }
-  }catch(e){ showLogin(); }
-}
-
-function showLogin(){
+function showLogin(errMsg){
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginId').value = '';
   document.getElementById('loginPw').value = '';
-  document.getElementById('loginErr').textContent = '';
+  document.getElementById('loginErr').textContent = errMsg || '';
 }
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
@@ -1470,27 +1474,18 @@ async function doLogin(){
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = '확인 중…';
   try{
-    const doc = await ACCOUNTS.doc(id).get();
-    if(!doc.exists || doc.data().password !== pw){
-      errEl.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
-      return;
-    }
-    currentUser = { id, role: doc.data().role };
-    saveSession(currentUser);
-    enterApp();
+    await auth.signInWithEmailAndPassword(toPseudoEmail(id), pw);
     logAction('로그인');
   }catch(e){
-    errEl.textContent = '로그인에 실패했습니다: ' + e.message;
+    errEl.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
   }finally{
     btn.disabled = false; btn.textContent = '로그인';
   }
 }
 
-document.getElementById('logoutBtn').onclick = ()=>{
+document.getElementById('logoutBtn').onclick = async ()=>{
   logAction('로그아웃');
-  clearSession();
-  currentUser = null;
-  showLogin();
+  try{ await auth.signOut(); }catch(e){}
 };
 
 /* ============ Tabs ============ */
@@ -1510,8 +1505,8 @@ document.getElementById('tabBtnSettings').onclick = ()=>{
 
 /* ============ Accounts (settings, admin only) ============ */
 let accountsCache = [];
-ACCOUNTS.onSnapshot(snap=>{
-  accountsCache = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+PROFILES.onSnapshot(snap=>{
+  accountsCache = snap.docs.map(d=>({ uid:d.id, ...d.data() }));
   renderAccounts();
 }, ()=>{});
 
@@ -1524,18 +1519,19 @@ function renderAccounts(){
     return `<div class="acct-row">
       <span class="id">${escapeHtml(a.id)}</span>
       <span class="role-tag ${a.role==='admin'?'admin':''}">${a.role==='admin'?'관리자':'일반'}</span>
-      ${isLastAdmin ? '' : `<button class="del-btn" data-id="${escapeAttr(a.id)}">삭제</button>`}
+      ${isLastAdmin ? '' : `<button class="del-btn" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}">삭제</button>`}
     </div>`;
   }).join('');
 }
 document.getElementById('acctList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('.del-btn');
   if(!btn) return;
+  const uid = btn.dataset.uid;
   const id = btn.dataset.id;
-  if(currentUser && id === currentUser.id){ alert('현재 로그인된 계정은 삭제할 수 없습니다.'); return; }
+  if(currentUser && uid === currentUser.uid){ alert('현재 로그인된 계정은 삭제할 수 없습니다.'); return; }
   if(!confirm(`'${id}' 계정을 삭제할까요?`)) return;
   try{
-    await ACCOUNTS.doc(id).delete();
+    await PROFILES.doc(uid).delete();
     logAction('계정 삭제', id);
   }catch(err){ alert('삭제 실패: ' + err.message); }
 });
@@ -1552,16 +1548,27 @@ document.getElementById('addAcctBtn').onclick = async ()=>{
   const id = document.getElementById('newAcctId').value.trim();
   const pw = document.getElementById('newAcctPw').value;
   if(!id || !pw){ alert('아이디와 비밀번호를 입력해주세요.'); return; }
+  if(!/^[a-zA-Z0-9_-]+$/.test(id)){ alert('아이디는 영문, 숫자, -, _ 만 사용할 수 있습니다.'); return; }
+  if(pw.length < 6){ alert('비밀번호는 6자 이상이어야 합니다.'); return; }
+  const btn = document.getElementById('addAcctBtn');
+  btn.disabled = true; btn.textContent = '추가 중…';
+  const secondary = firebase.initializeApp(firebaseConfig, 'create-' + Date.now());
   try{
-    const existing = await ACCOUNTS.doc(id).get();
-    if(existing.exists){ alert('이미 존재하는 아이디입니다.'); return; }
-    await ACCOUNTS.doc(id).set({ id, password: pw, role: newAcctRole });
+    const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail(id), pw);
+    await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id, role: newAcctRole });
+    await secondary.auth().signOut();
     logAction('계정 추가', `${id} (${newAcctRole==='admin'?'관리자':'일반'})`);
     document.getElementById('newAcctId').value = '';
     document.getElementById('newAcctPw').value = '';
     newAcctRole = 'user';
     [...document.querySelectorAll('#newAcctRole .chip')].forEach(c=>c.classList.toggle('active', c.dataset.r==='user'));
-  }catch(err){ alert('추가 실패: ' + err.message); }
+  }catch(err){
+    const msg = err.code === 'auth/email-already-in-use' ? '이미 존재하는 아이디입니다.' : ('추가 실패: ' + err.message);
+    alert(msg);
+  }finally{
+    try{ await secondary.delete(); }catch(e){}
+    btn.disabled = false; btn.textContent = '계정 추가';
+  }
 };
 
 /* ============ Logs (settings, admin only) ============ */
@@ -1577,7 +1584,22 @@ LOGS.orderBy('ts','desc').limit(60).onSnapshot(snap=>{
 }, ()=>{});
 
 /* ============ Boot ============ */
-ensureDefaultAdmin().finally(tryAutoLogin);
+ensureBootstrapAdmin().finally(()=>{
+  bootstrapping = false;
+  const user = auth.currentUser;
+  if(user){
+    PROFILES.doc(user.uid).get().then(doc=>{
+      if(doc.exists){
+        currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role };
+        enterApp();
+      } else {
+        auth.signOut().finally(()=>showLogin());
+      }
+    }).catch(()=>showLogin());
+  } else {
+    showLogin();
+  }
+});
 </script>
 </body>
 </html>
