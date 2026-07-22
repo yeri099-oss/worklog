@@ -999,12 +999,23 @@ function measureTextWidth(text, font){
   return __measureCtx.measureText(text).width;
 }
 function syncAllDayColumns(){
-  document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
+  document.querySelectorAll('#listWrap .day-group').forEach(group=>{
+    const container = group.querySelector('.day-entries');
+    const head = group.querySelector('.day-head');
+    if(!container) return;
     const rows = [...container.querySelectorAll('.entry')];
     syncRowColumns(rows, {
       handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col',
       catBuffer:26, noteBuffer:14
     });
+    if(head){
+      if(rows.length){
+        const w = rows[0].getBoundingClientRect().width;
+        head.style.width = w + 'px';
+      } else {
+        head.style.width = '';
+      }
+    }
   });
 }
 if(document.fonts && document.fonts.ready){
