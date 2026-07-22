@@ -1415,7 +1415,7 @@ async function ensureBootstrapAdmin(){
     if(!snap.empty) return;
     const secondary = firebase.initializeApp(firebaseConfig, 'bootstrap-' + Date.now());
     try{
-      const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail('admin'), '1234');
+      const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail('admin'), 'admin1234');
       await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id:'admin', role:'admin' });
       await secondary.auth().signOut();
     }catch(e){ /* 이미 만들어져 있거나 오프라인이면 무시 */ }
