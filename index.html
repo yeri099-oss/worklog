@@ -575,9 +575,11 @@ function toPseudoEmail(username){ return username.toLowerCase() + PSEUDO_DOMAIN;
 
 const syncDot = document.getElementById('syncDot');
 const syncText = document.getElementById('syncText');
-db.collection('workLogApp_meta').doc('ping').set({t: Date.now()}, {merge:true})
-  .then(()=>{ syncDot.classList.remove('off'); syncText.textContent = '동기화됨'; })
-  .catch(()=>{ syncText.textContent = '연결 실패'; });
+function pingSync(){
+  db.collection('workLogApp_meta').doc('ping').set({t: Date.now()}, {merge:true})
+    .then(()=>{ syncDot.classList.remove('off'); syncText.textContent = '동기화됨'; })
+    .catch(()=>{ syncText.textContent = '연결 실패'; });
+}
 
 /* ============ State ============ */
 const WEEKDAYS = ['일','월','화','수','목','금','토'];
@@ -748,14 +750,18 @@ document.addEventListener('click', (e)=>{
     document.getElementById('catSuggest').classList.remove('open');
   }
 });
-META.onSnapshot(doc=>{
-  const data = doc.data();
-  if(data && Array.isArray(data.list) && data.list.length){
-    const merged = [...new Set([...data.list, ...DEFAULT_CATS])];
-    categories = merged;
-  }
-  updateCategoryList();
-}, ()=>{ updateCategoryList(); });
+let unsubMeta = null;
+function startMetaSync(){
+  if(unsubMeta) return;
+  unsubMeta = META.onSnapshot(doc=>{
+    const data = doc.data();
+    if(data && Array.isArray(data.list) && data.list.length){
+      const merged = [...new Set([...data.list, ...DEFAULT_CATS])];
+      categories = merged;
+    }
+    updateCategoryList();
+  }, ()=>{ updateCategoryList(); });
+}
 
 function rememberCategory(cat){
   if(!cat) return;
@@ -851,14 +857,18 @@ document.getElementById('addBtn').onclick = async ()=>{
 };
 
 /* ============ Live list ============ */
-ENTRIES.orderBy('date','desc').onSnapshot(snap=>{
-  allEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
-  renderList();
-  updateCheckinBar();
-  autoCarryOverUnfinished();
-}, err=>{
-  document.getElementById('listWrap').innerHTML = `<div class="empty-state"><p>불러오기에 실패했습니다.</p><p style="font-size:11px;">${escapeHtml(err.message)}</p></div>`;
-});
+let unsubEntries = null;
+function startEntriesSync(){
+  if(unsubEntries) return;
+  unsubEntries = ENTRIES.orderBy('date','desc').onSnapshot(snap=>{
+    allEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderList();
+    updateCheckinBar();
+    autoCarryOverUnfinished();
+  }, err=>{
+    document.getElementById('listWrap').innerHTML = `<div class="empty-state"><p>불러오기에 실패했습니다.</p><p style="font-size:11px;">${escapeHtml(err.message)}</p></div>`;
+  });
+}
 
 let carryOverCheckedFor = null;
 let carryOverConfig = null;
@@ -1457,6 +1467,13 @@ function enterApp(){
   roleLabel.classList.toggle('admin', currentUser.role==='admin');
   document.getElementById('tabBtnSettings').style.display = currentUser.role==='admin' ? 'inline-block' : 'none';
   switchTab('worklog');
+  // 로그인 완료(인증된 상태) 후에 실시간 구독을 시작 — 인증 전에 시작하면 규칙에 막혀 이후 로그인해도 재구독되지 않음
+  startEntriesSync();
+  startMetaSync();
+  startProfilesSync();
+  startLogsSync();
+  pingSync();
+  if(pendingLoginLog){ pendingLoginLog = false; logAction('로그인'); }
   // 로그인 화면이 떠 있는 동안 숨겨진 상태로 폭 계산이 잘못될 수 있어, 화면이 실제로 보이는 시점에 다시 계산
   renderList();
 }
@@ -1465,6 +1482,7 @@ document.getElementById('loginBtn').onclick = doLogin;
 document.getElementById('loginPw').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 document.getElementById('loginId').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
+let pendingLoginLog = false;
 async function doLogin(){
   const id = document.getElementById('loginId').value.trim();
   const pw = document.getElementById('loginPw').value;
@@ -1474,9 +1492,10 @@ async function doLogin(){
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = '확인 중…';
   try{
+    pendingLoginLog = true;
     await auth.signInWithEmailAndPassword(toPseudoEmail(id), pw);
-    logAction('로그인');
   }catch(e){
+    pendingLoginLog = false;
     errEl.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
   }finally{
     btn.disabled = false; btn.textContent = '로그인';
@@ -1505,10 +1524,14 @@ document.getElementById('tabBtnSettings').onclick = ()=>{
 
 /* ============ Accounts (settings, admin only) ============ */
 let accountsCache = [];
-PROFILES.onSnapshot(snap=>{
-  accountsCache = snap.docs.map(d=>({ uid:d.id, ...d.data() }));
-  renderAccounts();
-}, ()=>{});
+let unsubProfiles = null;
+function startProfilesSync(){
+  if(unsubProfiles) return;
+  unsubProfiles = PROFILES.onSnapshot(snap=>{
+    accountsCache = snap.docs.map(d=>({ uid:d.id, ...d.data() }));
+    renderAccounts();
+  }, ()=>{});
+}
 
 function renderAccounts(){
   const wrap = document.getElementById('acctList');
@@ -1572,16 +1595,20 @@ document.getElementById('addAcctBtn').onclick = async ()=>{
 };
 
 /* ============ Logs (settings, admin only) ============ */
-LOGS.orderBy('ts','desc').limit(60).onSnapshot(snap=>{
-  const wrap = document.getElementById('logList');
-  if(snap.empty){ wrap.innerHTML = '<div class="log-row">기록이 없습니다.</div>'; return; }
-  wrap.innerHTML = snap.docs.map(d=>{
-    const l = d.data();
-    const t = l.ts && l.ts.toDate ? l.ts.toDate() : new Date();
-    const tStr = `${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
-    return `<div class="log-row"><span class="who">${escapeHtml(l.user||'')}</span> · ${tStr} · ${escapeHtml(l.action||'')}${l.detail?' — '+escapeHtml(l.detail):''}</div>`;
-  }).join('');
-}, ()=>{});
+let unsubLogs = null;
+function startLogsSync(){
+  if(unsubLogs) return;
+  unsubLogs = LOGS.orderBy('ts','desc').limit(60).onSnapshot(snap=>{
+    const wrap = document.getElementById('logList');
+    if(snap.empty){ wrap.innerHTML = '<div class="log-row">기록이 없습니다.</div>'; return; }
+    wrap.innerHTML = snap.docs.map(d=>{
+      const l = d.data();
+      const t = l.ts && l.ts.toDate ? l.ts.toDate() : new Date();
+      const tStr = `${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      return `<div class="log-row"><span class="who">${escapeHtml(l.user||'')}</span> · ${tStr} · ${escapeHtml(l.action||'')}${l.detail?' — '+escapeHtml(l.detail):''}</div>`;
+    }).join('');
+  }, ()=>{});
+}
 
 /* ============ Boot ============ */
 ensureBootstrapAdmin().finally(()=>{
