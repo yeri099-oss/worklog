@@ -171,6 +171,7 @@
   .entry{
     display:flex; align-items:stretch; border-bottom: 1px dashed var(--rule);
     cursor:pointer;
+    width: -webkit-fit-content; width: -moz-fit-content; width: fit-content; max-width:100%;
   }
   .entry:last-child{ border-bottom:none; }
   .entry:active{ background: rgba(203,210,217,.25); }
@@ -978,7 +979,7 @@ function syncRowColumns(rows, opts){
   });
 
   const sample = rows[0];
-  const rowW = sample.getBoundingClientRect().width;
+  const rowW = (sample.parentElement || sample).getBoundingClientRect().width;
   let usedW = catW + noteW;
   if(opts.handleSel){
     const h = sample.querySelector(opts.handleSel);
@@ -986,7 +987,7 @@ function syncRowColumns(rows, opts){
   }
   usedW += 6; // border widths between columns
   const cap = Math.max(80, rowW - usedW);
-  const finalW = Math.min(Math.ceil(maxNatural) + 20, cap);
+  const finalW = Math.min(Math.ceil(maxNatural * 1.05) + 24, cap);
   contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = finalW + 'px'; });
 }
 let __measureCtx = null;
