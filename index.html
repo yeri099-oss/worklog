@@ -896,9 +896,8 @@ async function autoCarryOverUnfinished(){
   const cfg = await initCarryOverConfig();
   const yesterday = shiftDate(today, -1);
   if(yesterday < cfg.activatedOn) return; // 기존에 있던 업무일지에는 소급 적용하지 않음
-  const todays = allEntries.filter(e=>e.date===today);
-  const yestUnfinished = allEntries.filter(e=>e.date===yesterday && e.note==='진행중');
-  const toCopy = yestUnfinished.filter(y => !todays.some(t => t.category===y.category && t.content===y.content));
+  const yestUnfinished = allEntries.filter(e=>e.date===yesterday && e.note==='진행중' && !e.carriedOverDone);
+  const toCopy = yestUnfinished;
   if(!toCopy.length) return;
   const base = Date.now();
   const batch = db.batch();
@@ -913,6 +912,7 @@ async function autoCarryOverUnfinished(){
       carriedFrom: yesterday,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+    batch.update(ENTRIES.doc(y.id), { carriedOverDone: true });
   });
   try{
     await batch.commit();
