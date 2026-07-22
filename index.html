@@ -196,13 +196,14 @@
     padding:9px 10px; display:flex; align-items:center; justify-content:flex-start; text-align:left;
   }
   .entry .note-col{
-    flex:none; width:auto; min-width:56px; padding:9px 8px; display:flex; align-items:center; justify-content:center; text-align:center;
+    flex:none; width:auto; min-width:56px; padding:9px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
     font-size:10.5px; font-weight:600; white-space:normal; word-break:break-word; overflow-wrap:anywhere;
     color:var(--ink-soft); background:transparent;
   }
   .entry .note-col.done{ background:var(--slate); color:#fff; }
   .entry .note-col.progress{ background:var(--seal); color:#fff; }
   .entry .note-col.wait{ background:var(--yellow); color:var(--ink); }
+  .dday{ font-size:9px; font-weight:700; opacity:.85; }
 
   .empty-state{
     text-align:center; padding: 40px 20px; color: var(--ink-soft);
@@ -284,7 +285,7 @@
   .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
   .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
   .rc-row .rc-note-col{
-    flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; align-items:center; justify-content:center; text-align:center;
+    flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
     font-size:10px; font-weight:600; color:var(--ink-soft); background:transparent;
   }
   .rc-row .rc-note-col.done{ background:var(--slate); color:#fff; }
@@ -335,6 +336,30 @@
   .log-row:last-child{ border-bottom:none; }
   .log-row .who{ color:var(--ink); font-weight:600; }
   .del-btn{ margin-left:auto; font-size:11px; color:var(--seal); background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:4px 10px; cursor:pointer; font-family:inherit; }
+
+  /* ===== Mobile ===== */
+  @media (max-width: 640px){
+    .drag-handle{ display:none !important; }
+    .entry{
+      flex-wrap:wrap !important; width:100% !important;
+      padding:8px 4px;
+    }
+    .entry .cat{
+      width:100% !important; border-right:none !important;
+      border-bottom:1px dashed var(--rule); padding:4px 2px !important;
+    }
+    .entry .content-line{
+      width:100% !important; border-right:none !important;
+      padding:6px 2px !important;
+    }
+    .entry .note-col{
+      width:auto !important; min-width:52px; margin-left:0; margin-top:4px;
+      flex-direction:row !important; gap:6px; padding:4px 10px !important; border-radius:6px;
+    }
+    .add-card{ padding:12px 12px 10px; }
+    main{ padding:10px 12px 0; }
+    .header-inner{ padding:12px 14px 10px; }
+  }
 </style>
 </head>
 <body>
@@ -413,6 +438,10 @@
     <div class="field">
       <input type="text" id="noteInput">
     </div>
+    <label class="field-label">마감일 (선택, 디데이 표시)</label>
+    <div class="field">
+      <input type="date" id="dueDateInput">
+    </div>
 
     <button class="add-btn" id="addBtn">+ 업무일지에 추가</button>
   </div>
@@ -435,7 +464,10 @@
 
   <div class="toolbar">
     <span class="count" id="entryCount"></span>
-    <div class="report-btn" id="reportBtn">📋 오늘 업무 보고 만들기</div>
+    <div style="display:flex; gap:8px;">
+      <div class="report-btn" id="exportBtn">📊 엑셀로 내보내기</div>
+      <div class="report-btn" id="reportBtn">📋 오늘 업무 보고 만들기</div>
+    </div>
   </div>
 
   <div id="listWrap"></div>
@@ -454,6 +486,11 @@
       </div>
       <button class="add-btn" id="addAcctBtn">계정 추가</button>
     </div>
+  </div>
+
+  <div class="settings-card">
+    <h4>구분 관리</h4>
+    <div id="catManageList"></div>
   </div>
 
   <div class="settings-card">
@@ -480,6 +517,8 @@
       <div class="status-chip" data-v="대기중">대기중</div>
     </div>
     <div class="field"><input type="text" id="editNote"></div>
+    <label class="field-label">마감일 (선택, 디데이 표시)</label>
+    <div class="field"><input type="date" id="editDueDate"></div>
     <div class="row-btns">
       <button class="danger" id="editDelete">삭제</button>
       <button class="primary" id="editSave">저장</button>
@@ -510,6 +549,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 /* ============ Firebase ============ */
@@ -627,7 +667,28 @@ renderDateLabel();
 /* ============ Categories ============ */
 function updateCategoryList(){
   document.getElementById('catList').innerHTML = categories.map(c=>`<option value="${escapeAttr(c)}">`).join('');
+  renderCatManageList();
 }
+function renderCatManageList(){
+  const wrap = document.getElementById('catManageList');
+  if(!wrap) return;
+  if(!categories.length){ wrap.innerHTML = '<div class="acct-row">등록된 구분이 없습니다.</div>'; return; }
+  wrap.innerHTML = categories.map(c=>`
+    <div class="acct-row">
+      <span class="id">${escapeHtml(c)}</span>
+      <button class="del-btn" data-c="${escapeAttr(c)}">삭제</button>
+    </div>`).join('');
+}
+document.getElementById('catManageList').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.del-btn');
+  if(!btn) return;
+  const c = btn.dataset.c;
+  if(!confirm(`'${c}' 구분을 자동완성 목록에서 삭제할까요? (이미 기록된 업무일지는 그대로 남습니다)`)) return;
+  categories = categories.filter(x=>x!==c);
+  META.set({ list: categories.slice(0,40) }, {merge:true}).catch(()=>{});
+  logAction('구분 삭제', c);
+  renderCatManageList();
+});
 function renderCatSuggest(){
   const wrap = document.getElementById('catSuggest');
   const q = document.getElementById('catInput').value.trim().toLowerCase();
@@ -719,6 +780,7 @@ document.getElementById('addBtn').onclick = async ()=>{
   const cat = document.getElementById('catInput').value.trim();
   const content = document.getElementById('contentInput').value.trim();
   const note = document.getElementById('noteInput').value.trim();
+  const dueDate = document.getElementById('dueDateInput').value || '';
   if(!cat || !content){
     alert('구분과 내용을 입력해주세요.');
     return;
@@ -731,6 +793,7 @@ document.getElementById('addBtn').onclick = async ()=>{
       category: cat,
       content: content,
       note: note,
+      dueDate: dueDate,
       seq: Date.now(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -739,6 +802,7 @@ document.getElementById('addBtn').onclick = async ()=>{
     document.getElementById('catInput').value = '';
     document.getElementById('contentInput').value = '';
     document.getElementById('noteInput').value = '';
+    document.getElementById('dueDateInput').value = '';
     selectedStatus = '';
     syncStatusChips();
     document.getElementById('catSuggest').classList.remove('open');
@@ -818,6 +882,13 @@ function sortEntries(list){
 }
 function noteClass(note){
   return note==='완료' ? 'done' : note==='진행중' ? 'progress' : note==='대기중' ? 'wait' : '';
+}
+function computeDday(dueDate){
+  if(!dueDate) return '';
+  const diff = Math.round((parseDate(dueDate) - parseDate(todayStr())) / 86400000);
+  if(diff > 0) return `D-${diff}`;
+  if(diff === 0) return 'D-day';
+  return `D+${Math.abs(diff)}`;
 }
 
 function availableMonths(){
@@ -930,12 +1001,13 @@ function renderList(){
     const rows = entries.map(e=>{
       const note = e.note || '';
       const cls = noteClass(note);
+      const dday = e.dueDate ? computeDday(e.dueDate) : '';
       return `
         <div class="entry" data-id="${e.id}">
           <span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>
           <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line">${escapeHtml(e.content)}</span>
-          <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}</span>
+          <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }).join('');
     return `
@@ -1102,6 +1174,7 @@ function openEdit(id){
   document.getElementById('editNote').value = note;
   editSelectedStatus = (note==='완료'||note==='진행중'||note==='대기중') ? note : '';
   syncEditStatusChips();
+  document.getElementById('editDueDate').value = e.dueDate || '';
   document.getElementById('editOverlay').classList.add('open');
 }
 document.getElementById('editClose').onclick = ()=>{ document.getElementById('editOverlay').classList.remove('open'); };
@@ -1112,9 +1185,10 @@ document.getElementById('editSave').onclick = async ()=>{
   const cat = document.getElementById('editCat').value.trim();
   const content = document.getElementById('editContent').value.trim();
   const note = document.getElementById('editNote').value.trim();
+  const dueDate = document.getElementById('editDueDate').value || '';
   if(!cat || !content){ alert('구분과 내용을 입력해주세요.'); return; }
   try{
-    await ENTRIES.doc(editingId).update({ category: cat, content, note });
+    await ENTRIES.doc(editingId).update({ category: cat, content, note, dueDate });
     logAction('업무일지 수정', cat);
     rememberCategory(cat);
     document.getElementById('editOverlay').classList.remove('open');
@@ -1129,6 +1203,40 @@ document.getElementById('editDelete').onclick = async ()=>{
     logAction('업무일지 삭제', e ? `${e.date} ${e.category}` : editingId);
     document.getElementById('editOverlay').classList.remove('open');
   }catch(err){ alert('삭제 실패: ' + err.message); }
+};
+
+/* ============ Excel export ============ */
+document.getElementById('exportBtn').onclick = ()=>{
+  const monthEntries = allEntries.filter(e=>e.date.slice(0,7)===currentMonth);
+  if(!monthEntries.length){ alert('이 달에 내보낼 업무일지가 없습니다.'); return; }
+  const byDate = {};
+  monthEntries.forEach(e=>{ (byDate[e.date] = byDate[e.date] || []).push(e); });
+  const dates = Object.keys(byDate).sort((a,b)=> a<b?1:-1);
+  const rows = [];
+  dates.forEach(d=>{
+    const {day, wd} = fmtLabel(d);
+    const entries = sortEntries(byDate[d]);
+    entries.forEach((e, idx)=>{
+      rows.push({
+        '일': idx===0 ? day : '',
+        '요일': idx===0 ? wd+'요일' : '',
+        '구분': e.category,
+        '내용': e.content,
+        '비고': e.note || ''
+      });
+    });
+  });
+  try{
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:8},{wch:16},{wch:60},{wch:10}];
+    const wb = XLSX.utils.book_new();
+    const mm = parseInt(currentMonth.slice(5,7), 10);
+    XLSX.utils.book_append_sheet(wb, ws, `${mm}월`);
+    XLSX.writeFile(wb, `업무일지_${currentMonth}.xlsx`);
+    logAction('엑셀 내보내기', currentMonth);
+  }catch(err){
+    alert('엑셀 파일 생성에 실패했습니다: ' + err.message);
+  }
 };
 
 /* ============ Report ============ */
@@ -1154,11 +1262,12 @@ function buildReport(){
   } else {
     bodyEl.innerHTML = entries.map(e=>{
       const note = e.note || '';
+      const dday = e.dueDate ? computeDday(e.dueDate) : '';
       return `
         <div class="rc-row">
           <span class="rc-cat">${escapeHtml(e.category)}</span>
           <span class="rc-content">${escapeHtml(e.content)}</span>
-          <span class="rc-note-col ${noteClass(note)}">${note ? escapeHtml(note) : ''}</span>
+          <span class="rc-note-col ${noteClass(note)}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }).join('');
   }
