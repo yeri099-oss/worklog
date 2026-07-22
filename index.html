@@ -125,6 +125,7 @@
   }
   .suggest-dropdown.open{ display:block; }
   .suggest-item{ padding:9px 12px; font-size:13.5px; cursor:pointer; color:var(--ink); }
+  .suggest-item.active, .suggest-item:hover{ background:var(--seal-soft); }
   .suggest-item:active{ background:var(--paper); }
 
   input[type=text], textarea, input[type=date]{
@@ -438,7 +439,7 @@
     <div class="field">
       <input type="text" id="noteInput">
     </div>
-    <label class="field-label">마감일 (선택, 디데이 표시)</label>
+    <label class="field-label">기준일 (선택, 디데이 표시)</label>
     <div class="field">
       <input type="date" id="dueDateInput">
     </div>
@@ -517,7 +518,7 @@
       <div class="status-chip" data-v="대기중">대기중</div>
     </div>
     <div class="field"><input type="text" id="editNote"></div>
-    <label class="field-label">마감일 (선택, 디데이 표시)</label>
+    <label class="field-label">기준일 (선택, 디데이 표시)</label>
     <div class="field"><input type="date" id="editDueDate"></div>
     <div class="row-btns">
       <button class="danger" id="editDelete">삭제</button>
@@ -695,12 +696,43 @@ function renderCatSuggest(){
   const list = q
     ? categories.filter(c => c.toLowerCase().includes(q) && c.toLowerCase() !== q)
     : categories.slice(0, 8);
+  catSuggestActiveIdx = -1;
   if(!list.length){ wrap.classList.remove('open'); wrap.innerHTML = ''; return; }
   wrap.innerHTML = list.slice(0, 8).map(c=>`<div class="suggest-item" data-c="${escapeAttr(c)}">${escapeHtml(c)}</div>`).join('');
   wrap.classList.add('open');
 }
+let catSuggestActiveIdx = -1;
+function updateCatSuggestActive(){
+  const items = [...document.querySelectorAll('#catSuggest .suggest-item')];
+  items.forEach((el, i)=> el.classList.toggle('active', i===catSuggestActiveIdx));
+  const activeEl = items[catSuggestActiveIdx];
+  if(activeEl) activeEl.scrollIntoView({ block:'nearest' });
+}
 document.getElementById('catInput').addEventListener('input', renderCatSuggest);
 document.getElementById('catInput').addEventListener('focus', renderCatSuggest);
+document.getElementById('catInput').addEventListener('keydown', (e)=>{
+  const wrap = document.getElementById('catSuggest');
+  if(!wrap.classList.contains('open')) return;
+  const items = [...wrap.querySelectorAll('.suggest-item')];
+  if(!items.length) return;
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    catSuggestActiveIdx = (catSuggestActiveIdx + 1) % items.length;
+    updateCatSuggestActive();
+  } else if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    catSuggestActiveIdx = (catSuggestActiveIdx - 1 + items.length) % items.length;
+    updateCatSuggestActive();
+  } else if(e.key === 'Enter'){
+    if(catSuggestActiveIdx >= 0 && items[catSuggestActiveIdx]){
+      e.preventDefault();
+      document.getElementById('catInput').value = items[catSuggestActiveIdx].dataset.c;
+      wrap.classList.remove('open');
+    }
+  } else if(e.key === 'Escape'){
+    wrap.classList.remove('open');
+  }
+});
 document.getElementById('catSuggest').addEventListener('click', (e)=>{
   const item = e.target.closest('.suggest-item');
   if(!item) return;
@@ -887,7 +919,7 @@ function computeDday(dueDate){
   if(!dueDate) return '';
   const diff = Math.round((parseDate(dueDate) - parseDate(todayStr())) / 86400000);
   if(diff > 0) return `D-${diff}`;
-  if(diff === 0) return 'D-day';
+  if(diff === 0) return 'D+0';
   return `D+${Math.abs(diff)}`;
 }
 
