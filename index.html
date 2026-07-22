@@ -193,7 +193,7 @@
     padding:9px 10px; display:flex; align-items:center; justify-content:flex-start; text-align:left;
   }
   .entry .note-col{
-    flex:none; width:68px; padding:9px 6px; display:flex; align-items:center; justify-content:center; text-align:center;
+    flex:none; width:auto; min-width:56px; padding:9px 8px; display:flex; align-items:center; justify-content:center; text-align:center;
   }
   .entry .note-tag{
     font-size:10.5px; padding:3px 9px; border-radius:999px; border:1px solid var(--rule-strong);
@@ -283,7 +283,7 @@
   .rc-row:last-child{ border-bottom:none; }
   .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink-soft); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
-  .rc-row .rc-note-col{ flex:none; width:60px; padding:7px 4px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .rc-row .rc-note-col{ flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-note{ font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; text-align:center; max-width:100%; white-space:normal; word-break:break-word; overflow-wrap:anywhere; }
   .rc-empty{ text-align:center; color:var(--ink-soft); font-size:12.5px; padding:20px 0; }
   .copied-toast{
@@ -889,41 +889,54 @@ function renderList(){
         </div>
       </div>`;
   }).join('');
-  equalizeColumnWidth('#listWrap .cat', 26);
-  equalizeContentColumn('#listWrap .entry', '.drag-handle', '.cat', '.content-line', '.note-col');
+  syncAllDayColumns();
 }
-function equalizeColumnWidth(selector, buffer){
-  const cells = [...document.querySelectorAll(selector)];
-  if(!cells.length) return;
-  cells.forEach(c=>{ c.style.width = 'max-content'; });
-  const maxW = Math.max(...cells.map(c=>c.offsetWidth)) + (buffer || 0);
-  cells.forEach(c=>{ c.style.width = maxW + 'px'; });
-}
-function equalizeContentColumn(rowSelector, handleSel, catSel, contentSel, noteSel){
-  const rows = [...document.querySelectorAll(rowSelector)];
+function syncRowColumns(rows, opts){
+  rows = [...rows];
   if(!rows.length) return;
-  const contents = rows.map(r=>r.querySelector(contentSel)).filter(Boolean);
-  if(!contents.length) return;
-  contents.forEach(c=>{ c.style.flex = 'none'; c.style.width = 'max-content'; });
-  const maxNatural = Math.max(...contents.map(c=>c.scrollWidth));
+  const catCells = rows.map(r=>r.querySelector(opts.catSel)).filter(Boolean);
+  if(!catCells.length) return;
+
+  catCells.forEach(c=>{ c.style.width = 'max-content'; });
+  const catW = Math.max(...catCells.map(c=>c.offsetWidth)) + (opts.catBuffer || 0);
+  catCells.forEach(c=>{ c.style.width = catW + 'px'; });
+
+  let noteW = 0;
+  const noteCells = opts.noteSel ? rows.map(r=>r.querySelector(opts.noteSel)).filter(Boolean) : [];
+  if(noteCells.length){
+    noteCells.forEach(c=>{ c.style.width = 'max-content'; });
+    noteW = Math.max(...noteCells.map(c=>c.offsetWidth)) + (opts.noteBuffer || 0);
+    noteCells.forEach(c=>{ c.style.width = noteW + 'px'; });
+  }
+
+  const contentCells = rows.map(r=>r.querySelector(opts.contentSel)).filter(Boolean);
+  if(!contentCells.length) return;
+  contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = 'max-content'; });
+  const maxNatural = Math.max(...contentCells.map(c=>c.scrollWidth));
   const sample = rows[0];
   const rowW = sample.getBoundingClientRect().width;
-  let usedW = 0;
-  [handleSel, catSel, noteSel].forEach(sel=>{
-    if(!sel) return;
-    const el = sample.querySelector(sel);
-    if(el) usedW += el.getBoundingClientRect().width;
-  });
+  let usedW = catW + noteW;
+  if(opts.handleSel){
+    const h = sample.querySelector(opts.handleSel);
+    if(h) usedW += h.getBoundingClientRect().width;
+  }
   usedW += 4; // border widths between columns
   const cap = Math.max(80, rowW - usedW);
   const finalW = Math.min(maxNatural, cap);
-  contents.forEach(c=>{ c.style.width = finalW + 'px'; });
+  contentCells.forEach(c=>{ c.style.width = finalW + 'px'; });
+}
+function syncAllDayColumns(){
+  document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
+    const rows = [...container.querySelectorAll('.entry')];
+    syncRowColumns(rows, {
+      handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col',
+      catBuffer:26, noteBuffer:14
+    });
+  });
 }
 window.addEventListener('resize', ()=>{
   clearTimeout(window.__resizeT);
-  window.__resizeT = setTimeout(()=>{
-    equalizeContentColumn('#listWrap .entry', '.drag-handle', '.cat', '.content-line', '.note-col');
-  }, 150);
+  window.__resizeT = setTimeout(syncAllDayColumns, 150);
 });
 updateMonthBtnLabel();
 
@@ -1035,8 +1048,8 @@ let reportDate = todayStr();
 document.getElementById('reportBtn').onclick = ()=>{
   reportDate = todayStr();
   document.getElementById('reportDatePicker').value = reportDate;
-  buildReport();
   document.getElementById('reportOverlay').classList.add('open');
+  buildReport();
 };
 document.getElementById('reportDatePicker').onchange = (e)=>{ reportDate = e.target.value; buildReport(); };
 document.getElementById('reportClose').onclick = ()=>{ document.getElementById('reportOverlay').classList.remove('open'); };
@@ -1061,8 +1074,10 @@ function buildReport(){
         </div>`;
     }).join('');
   }
-  equalizeColumnWidth('#reportCaptureBody .rc-cat', 22);
-  equalizeContentColumn('#reportCaptureBody .rc-row', null, '.rc-cat', '.rc-content', '.rc-note-col');
+  syncRowColumns(document.querySelectorAll('#reportCaptureBody .rc-row'), {
+    handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col',
+    catBuffer:22, noteBuffer:12
+  });
 }
 
 function showToast(msg){
