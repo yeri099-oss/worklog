@@ -965,8 +965,37 @@ function syncRowColumns(rows, opts){
 
   const contentCells = rows.map(r=>r.querySelector(opts.contentSel)).filter(Boolean);
   if(!contentCells.length) return;
-  // 내용 칸은 구분·비고를 뺀 나머지 공간을 항상 꽉 채운다 (비고가 오른쪽 끝에 붙도록)
-  contentCells.forEach(c=>{ c.style.flex = '1'; c.style.width = 'auto'; });
+
+  // 캔버스 텍스트 측정 API로 실제 렌더 폭을 정확히 계산 (DOM 레이아웃 방식보다 신뢰도 높음)
+  let maxNatural = 0;
+  contentCells.forEach(c=>{
+    const cs = getComputedStyle(c);
+    const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    (c.textContent || '').split('\n').forEach(line=>{
+      const w = measureTextWidth(line.length ? line : ' ', font);
+      if(w > maxNatural) maxNatural = w;
+    });
+  });
+
+  const sample = rows[0];
+  const rowW = sample.getBoundingClientRect().width;
+  let usedW = catW + noteW;
+  if(opts.handleSel){
+    const h = sample.querySelector(opts.handleSel);
+    if(h) usedW += h.getBoundingClientRect().width;
+  }
+  usedW += 6; // border widths between columns
+  const cap = Math.max(80, rowW - usedW);
+  const finalW = Math.min(Math.ceil(maxNatural) + 20, cap);
+  contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = finalW + 'px'; });
+}
+let __measureCtx = null;
+function measureTextWidth(text, font){
+  if(!__measureCtx){
+    __measureCtx = document.createElement('canvas').getContext('2d');
+  }
+  __measureCtx.font = font;
+  return __measureCtx.measureText(text).width;
 }
 function syncAllDayColumns(){
   document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
