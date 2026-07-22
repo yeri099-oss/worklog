@@ -173,7 +173,6 @@
   .entry{
     display:flex; align-items:stretch; border-bottom: 1px dashed var(--rule);
     cursor:pointer;
-    width: -webkit-fit-content; width: -moz-fit-content; width: fit-content; max-width:100%;
   }
   .entry:last-child{ border-bottom:none; }
   .entry:active{ background: rgba(203,210,217,.25); }
@@ -971,7 +970,13 @@ function syncRowColumns(rows, opts){
   const contentCells = rows.map(r=>r.querySelector(opts.contentSel)).filter(Boolean);
   if(!contentCells.length) return;
 
-  // 캔버스 텍스트 측정 API로 실제 렌더 폭을 정확히 계산 (DOM 레이아웃 방식보다 신뢰도 높음)
+  if(opts.contentMode === 'fill'){
+    // 내용 칸은 구분·비고를 뺀 나머지 공간을 항상 꽉 채운다 (표 전체 폭이 입력창과 동일하게 유지됨)
+    contentCells.forEach(c=>{ c.style.flex = '1'; c.style.width = 'auto'; });
+    return;
+  }
+
+  // 'fit' 모드: 캔버스 텍스트 측정 API로 실제 렌더 폭을 정확히 계산해 내용 길이만큼만 차지하게 함
   let maxNatural = 0;
   contentCells.forEach(c=>{
     const cs = getComputedStyle(c);
@@ -1003,23 +1008,12 @@ function measureTextWidth(text, font){
   return __measureCtx.measureText(text).width;
 }
 function syncAllDayColumns(){
-  document.querySelectorAll('#listWrap .day-group').forEach(group=>{
-    const container = group.querySelector('.day-entries');
-    const head = group.querySelector('.day-head');
-    if(!container) return;
+  document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
     const rows = [...container.querySelectorAll('.entry')];
     syncRowColumns(rows, {
       handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col',
-      catBuffer:14, noteBuffer:14
+      catBuffer:14, noteBuffer:14, contentMode:'fill'
     });
-    if(head){
-      if(rows.length){
-        const w = rows[0].getBoundingClientRect().width;
-        head.style.width = w + 'px';
-      } else {
-        head.style.width = '';
-      }
-    }
   });
 }
 if(document.fonts && document.fonts.ready){
@@ -1167,7 +1161,7 @@ function buildReport(){
   }
   syncRowColumns(document.querySelectorAll('#reportCaptureBody .rc-row'), {
     handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col',
-    catBuffer:12, noteBuffer:12
+    catBuffer:12, noteBuffer:12, contentMode:'fit'
   });
   {
     const firstRow = document.querySelector('#reportCaptureBody .rc-row');
