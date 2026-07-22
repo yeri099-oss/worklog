@@ -128,12 +128,12 @@
   .suggest-item.active, .suggest-item:hover{ background:var(--seal-soft); }
   .suggest-item:active{ background:var(--paper); }
 
-  input[type=text], textarea, input[type=date]{
+  input[type=text], input[type=password], textarea, input[type=date]{
     width:100%; font-family:inherit; font-size:14.5px; color:var(--ink);
     border:1px solid var(--rule-strong); border-radius:10px; background:var(--paper);
     padding:9px 11px; outline:none;
   }
-  input[type=text]:focus, textarea:focus{ border-color: var(--seal); background:#fff; }
+  input[type=text]:focus, input[type=password]:focus, textarea:focus{ border-color: var(--seal); background:#fff; }
   textarea{ min-height:58px; resize:vertical; line-height:1.45; }
   .field{ margin-bottom:10px; }
 
