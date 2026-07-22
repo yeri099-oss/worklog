@@ -184,7 +184,7 @@
     flex:none; width:auto; min-width:64px; font-size:11.5px; font-weight:600; color:var(--ink-soft);
     white-space:nowrap; overflow:visible;
     border-right:1.5px solid var(--rule-strong);
-    padding:9px 13px; display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:9px 13px; display:flex; align-items:center; justify-content:flex-start; text-align:left;
   }
   .entry .content-line{
     flex:1; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink);
@@ -281,7 +281,7 @@
   }
   .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:12.5px; }
   .rc-row:last-child{ border-bottom:none; }
-  .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink-soft); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink-soft); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
   .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
   .rc-row .rc-note-col{ flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-note{ font-size:10px; padding:2px 7px; border-radius:999px; font-weight:600; text-align:center; max-width:100%; white-space:normal; word-break:break-word; overflow-wrap:anywhere; }
@@ -965,42 +965,8 @@ function syncRowColumns(rows, opts){
 
   const contentCells = rows.map(r=>r.querySelector(opts.contentSel)).filter(Boolean);
   if(!contentCells.length) return;
-
-  // content-line 자체가 display:flex라 max-content 측정이 부정확할 수 있어,
-  // 보이지 않는 임시 span으로 실제 텍스트의 가장 긴 줄 너비를 정확히 측정한다.
-  const probe = document.createElement('span');
-  probe.style.position = 'fixed';
-  probe.style.left = '-9999px';
-  probe.style.top = '0';
-  probe.style.whiteSpace = 'pre';
-  probe.style.visibility = 'hidden';
-  document.body.appendChild(probe);
-  let maxNatural = 0;
-  contentCells.forEach(c=>{
-    const cs = getComputedStyle(c);
-    probe.style.fontFamily = cs.fontFamily;
-    probe.style.fontSize = cs.fontSize;
-    probe.style.fontWeight = cs.fontWeight;
-    probe.style.fontStyle = cs.fontStyle;
-    probe.style.letterSpacing = cs.letterSpacing;
-    (c.textContent || '').split('\n').forEach(line=>{
-      probe.textContent = line.length ? line : ' ';
-      maxNatural = Math.max(maxNatural, probe.scrollWidth);
-    });
-  });
-  document.body.removeChild(probe);
-
-  const sample = rows[0];
-  const rowW = sample.getBoundingClientRect().width;
-  let usedW = catW + noteW;
-  if(opts.handleSel){
-    const h = sample.querySelector(opts.handleSel);
-    if(h) usedW += h.getBoundingClientRect().width;
-  }
-  usedW += 6; // border widths between columns
-  const cap = Math.max(80, rowW - usedW);
-  const finalW = Math.min(maxNatural + 14, cap);
-  contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = finalW + 'px'; });
+  // 내용 칸은 구분·비고를 뺀 나머지 공간을 항상 꽉 채운다 (비고가 오른쪽 끝에 붙도록)
+  contentCells.forEach(c=>{ c.style.flex = '1'; c.style.width = 'auto'; });
 }
 function syncAllDayColumns(){
   document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
