@@ -965,8 +965,28 @@ function syncRowColumns(rows, opts){
 
   const contentCells = rows.map(r=>r.querySelector(opts.contentSel)).filter(Boolean);
   if(!contentCells.length) return;
-  contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = 'max-content'; });
-  const maxNatural = Math.max(...contentCells.map(c=>c.scrollWidth));
+
+  // content-line 자체가 display:flex라 max-content 측정이 부정확할 수 있어,
+  // 보이지 않는 임시 span으로 실제 텍스트의 가장 긴 줄 너비를 정확히 측정한다.
+  const probe = document.createElement('span');
+  probe.style.position = 'fixed';
+  probe.style.left = '-9999px';
+  probe.style.top = '0';
+  probe.style.whiteSpace = 'pre';
+  probe.style.visibility = 'hidden';
+  document.body.appendChild(probe);
+  let maxNatural = 0;
+  contentCells.forEach(c=>{
+    const cs = getComputedStyle(c);
+    probe.style.font = cs.font;
+    probe.style.letterSpacing = cs.letterSpacing;
+    (c.textContent || '').split('\n').forEach(line=>{
+      probe.textContent = line.length ? line : ' ';
+      maxNatural = Math.max(maxNatural, probe.scrollWidth);
+    });
+  });
+  document.body.removeChild(probe);
+
   const sample = rows[0];
   const rowW = sample.getBoundingClientRect().width;
   let usedW = catW + noteW;
@@ -976,8 +996,8 @@ function syncRowColumns(rows, opts){
   }
   usedW += 4; // border widths between columns
   const cap = Math.max(80, rowW - usedW);
-  const finalW = Math.min(maxNatural, cap);
-  contentCells.forEach(c=>{ c.style.width = finalW + 'px'; });
+  const finalW = Math.min(maxNatural + 6, cap);
+  contentCells.forEach(c=>{ c.style.flex = 'none'; c.style.width = finalW + 'px'; });
 }
 function syncAllDayColumns(){
   document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
