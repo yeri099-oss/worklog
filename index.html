@@ -908,6 +908,7 @@ async function autoCarryOverUnfinished(){
       category: y.category,
       content: y.content,
       note: y.note,
+      dueDate: y.dueDate || '',
       seq: base + idx,
       carriedFrom: yesterday,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
