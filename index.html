@@ -896,7 +896,7 @@ async function autoCarryOverUnfinished(){
   const cfg = await initCarryOverConfig();
   const yesterday = shiftDate(today, -1);
   if(yesterday < cfg.activatedOn) return; // 기존에 있던 업무일지에는 소급 적용하지 않음
-  const yestUnfinished = allEntries.filter(e=>e.date===yesterday && e.note==='진행중' && !e.carriedOverDone);
+  const yestUnfinished = allEntries.filter(e=>e.date===yesterday && (e.note==='진행중' || e.note==='대기중') && !e.carriedOverDone);
   const toCopy = yestUnfinished;
   if(!toCopy.length) return;
   const base = Date.now();
@@ -907,7 +907,7 @@ async function autoCarryOverUnfinished(){
       date: today,
       category: y.category,
       content: y.content,
-      note: '진행중',
+      note: y.note,
       seq: base + idx,
       carriedFrom: yesterday,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -916,7 +916,7 @@ async function autoCarryOverUnfinished(){
   });
   try{
     await batch.commit();
-    logAction('전날 진행중 업무 이월', `${yesterday} → ${today} (${toCopy.length}건)`);
+    logAction('전날 미완료 업무 이월', `${yesterday} → ${today} (${toCopy.length}건)`);
   }catch(err){
     console.error('이월 실패', err);
     carryOverCheckedFor = null; // 실패 시 다음 스냅샷에서 재시도
