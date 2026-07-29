@@ -541,6 +541,17 @@
   </div>
 </div>
 
+<!-- Confirm modal (custom, centered) -->
+<div class="overlay center-modal" id="confirmOverlay">
+  <div class="sheet" style="max-width:340px;">
+    <p id="confirmMsg" style="font-size:14px; line-height:1.5; margin:0 0 18px; color:var(--ink);"></p>
+    <div class="row-btns">
+      <button id="confirmCancelBtn">취소</button>
+      <button class="primary" id="confirmOkBtn">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- Recurring tasks manage modal -->
 <div class="overlay center-modal" id="recurringOverlay">
   <div class="sheet">
@@ -798,11 +809,11 @@ function renderCatManageList(){
       <button class="del-btn" data-c="${escapeAttr(c)}">삭제</button>
     </div>`).join('');
 }
-document.getElementById('catManageList').addEventListener('click', (e)=>{
+document.getElementById('catManageList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('.del-btn');
   if(!btn) return;
   const c = btn.dataset.c;
-  if(!confirm(`'${c}' 구분을 자동완성 목록에서 삭제할까요? (이미 기록된 업무일지는 그대로 남습니다)`)) return;
+  if(!await customConfirm(`'${c}' 구분을 자동완성 목록에서 삭제할까요? (이미 기록된 업무일지는 그대로 남습니다)`)) return;
   categories = categories.filter(x=>x!==c);
   META.set({ list: categories.slice(0,40) }, {merge:true}).catch(()=>{});
   logAction('구분 삭제', c);
@@ -1402,7 +1413,6 @@ function openEdit(id){
   document.getElementById('editOverlay').classList.add('open');
 }
 document.getElementById('editClose').onclick = ()=>{ document.getElementById('editOverlay').classList.remove('open'); };
-document.getElementById('editOverlay').addEventListener('click', (e)=>{ if(e.target.id==='editOverlay') e.currentTarget.classList.remove('open'); });
 
 document.getElementById('editSave').onclick = async ()=>{
   if(!editingId) return;
@@ -1420,7 +1430,7 @@ document.getElementById('editSave').onclick = async ()=>{
 };
 document.getElementById('editDelete').onclick = async ()=>{
   if(!editingId) return;
-  if(!confirm('이 업무일지를 삭제할까요?')) return;
+  if(!await customConfirm('이 업무일지를 삭제할까요?')) return;
   const e = allEntries.find(x=>x.id===editingId);
   try{
     await ENTRIES.doc(editingId).delete();
@@ -1584,6 +1594,25 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
 };
 
 /* ============ Utils ============ */
+function customConfirm(message){
+  return new Promise(resolve=>{
+    document.getElementById('confirmMsg').textContent = message;
+    const overlay = document.getElementById('confirmOverlay');
+    overlay.classList.add('open');
+    const okBtn = document.getElementById('confirmOkBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+    function cleanup(result){
+      overlay.classList.remove('open');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -1739,7 +1768,7 @@ document.getElementById('acctList').addEventListener('click', async (e)=>{
   const uid = btn.dataset.uid;
   const id = btn.dataset.id;
   if(currentUser && uid === currentUser.uid){ alert('현재 로그인된 계정은 삭제할 수 없습니다.'); return; }
-  if(!confirm(`'${id}' 계정을 삭제할까요?`)) return;
+  if(!await customConfirm(`'${id}' 계정을 삭제할까요?`)) return;
   try{
     await PROFILES.doc(uid).delete();
     logAction('계정 삭제', id);
