@@ -605,6 +605,18 @@
   </div>
 </div>
 
+<!-- Display name change modal (admin edits any account) -->
+<div class="overlay center-modal" id="nameChangeOverlay">
+  <div class="sheet" style="max-width:340px;">
+    <h3>표시 이름 수정 <span class="x" id="nameChangeClose">닫기 ✕</span></h3>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">업무일지 목록·팀 현황에 이 이름으로 표시돼요.</p>
+    <label class="field-label"><span id="nameChangeForLabel"></span> 이름</label>
+    <div class="field"><input type="text" id="nameChangeInput" maxlength="12"></div>
+    <div class="err" id="nameChangeErr" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:6px;"></div>
+    <button class="add-btn" id="nameChangeSaveBtn">저장하기</button>
+  </div>
+</div>
+
 <!-- Password change modal -->
 <div class="overlay center-modal" id="pwChangeOverlay">
   <div class="sheet" style="max-width:360px;">
@@ -811,7 +823,7 @@ document.getElementById('checkinBtn').onclick = async ()=>{
         content: fillYesterday(it.content, selectedDate),
         note: it.note,
         ownerUid: currentUser.uid,
-        ownerName: currentUser.id,
+        ownerName: currentUser.displayName,
         seq: base + idx,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -1040,7 +1052,7 @@ document.getElementById('addBtn').onclick = async ()=>{
       note: note,
       dueDate: dueDate,
       ownerUid: currentUser.uid,
-      ownerName: currentUser.id,
+      ownerName: currentUser.displayName,
       seq: Date.now(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -1128,7 +1140,7 @@ async function autoCarryOverUnfinished(){
       note: y.note,
       dueDate: y.dueDate || '',
       ownerUid: currentUser.uid,
-      ownerName: currentUser.id,
+      ownerName: currentUser.displayName,
       seq: base + idx,
       carriedFrom: y.date,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1790,7 +1802,7 @@ auth.onAuthStateChanged(async (user)=>{
       showLogin('가입 승인 대기 중입니다. 관리자 승인 후 이용할 수 있어요.');
       return;
     }
-    currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role };
+    currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role, displayName: doc.data().displayName || doc.data().name || doc.data().id };
     enterApp();
   }catch(e){
     showLogin('로그인 확인에 실패했습니다: ' + e.message);
@@ -1808,7 +1820,7 @@ function showLogin(errMsg){
 function enterApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'block';
-  document.getElementById('userIdLabel').textContent = currentUser.id;
+  document.getElementById('userIdLabel').textContent = currentUser.displayName;
   const roleLabel = document.getElementById('userRoleLabel');
   roleLabel.textContent = currentUser.role === 'admin' ? '관리자' : '일반';
   roleLabel.classList.toggle('admin', currentUser.role==='admin');
@@ -1928,6 +1940,36 @@ document.getElementById('findBtn').onclick = async ()=>{
   btn.disabled = false; btn.textContent = '재설정 메일 보내기';
 };
 
+let nameChangeTargetUid = null;
+function openNameChangeModal(uid, currentName, label){
+  nameChangeTargetUid = uid;
+  document.getElementById('nameChangeForLabel').textContent = label;
+  document.getElementById('nameChangeInput').value = currentName;
+  document.getElementById('nameChangeErr').textContent = '';
+  document.getElementById('nameChangeOverlay').classList.add('open');
+}
+document.getElementById('nameChangeClose').onclick = ()=>{ document.getElementById('nameChangeOverlay').classList.remove('open'); };
+document.getElementById('nameChangeSaveBtn').onclick = async ()=>{
+  const val = document.getElementById('nameChangeInput').value.trim();
+  const err = document.getElementById('nameChangeErr');
+  if(!val){ err.textContent = '이름을 입력해주세요.'; return; }
+  if(!nameChangeTargetUid) return;
+  const btn = document.getElementById('nameChangeSaveBtn');
+  btn.disabled = true; btn.textContent = '저장 중…';
+  try{
+    await PROFILES.doc(nameChangeTargetUid).update({ displayName: val });
+    if(currentUser && nameChangeTargetUid === currentUser.uid){
+      currentUser.displayName = val;
+      document.getElementById('userIdLabel').textContent = val;
+    }
+    logAction('표시 이름 수정', val);
+    document.getElementById('nameChangeOverlay').classList.remove('open');
+  }catch(e){
+    err.textContent = '저장 실패: ' + e.message;
+  }finally{
+    btn.disabled = false; btn.textContent = '저장하기';
+  }
+};
 document.getElementById('pwChangeBtn').onclick = ()=>{
   document.getElementById('pwCurrentInput').value = '';
   document.getElementById('pwNewInput').value = '';
@@ -1999,10 +2041,12 @@ function renderAccounts(){
   const adminCount = approvedAccounts.filter(a=>a.role==='admin').length;
   wrap.innerHTML = approvedAccounts.map(a=>{
     const isLastAdmin = a.role==='admin' && adminCount<=1;
+    const displayName = a.displayName || a.name || a.id;
     return `<div class="acct-row">
-      <span class="id">${escapeHtml(a.id)}</span>
+      <span class="id">${escapeHtml(displayName)}${displayName!==a.id ? ` <span style="font-weight:400; color:var(--ink-soft); font-size:11px;">(${escapeHtml(a.id)})</span>` : ''}</span>
       <span class="role-tag ${a.role==='admin'?'admin':''}">${a.role==='admin'?'관리자':'일반'}</span>
-      ${isLastAdmin ? '' : `<button class="del-btn" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}">삭제</button>`}
+      <button class="del-btn" data-action="name" data-uid="${escapeAttr(a.uid)}" data-name="${escapeAttr(displayName)}" data-id="${escapeAttr(a.id)}" style="color:var(--seal); background:var(--seal-soft); border-color:var(--seal);">이름수정</button>
+      ${isLastAdmin ? '' : `<button class="del-btn" data-action="del" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}">삭제</button>`}
     </div>`;
   }).join('');
 }
@@ -2066,6 +2110,10 @@ document.getElementById('acctList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('.del-btn');
   if(!btn) return;
   const uid = btn.dataset.uid;
+  if(btn.dataset.action === 'name'){
+    openNameChangeModal(uid, btn.dataset.name, btn.dataset.id);
+    return;
+  }
   const id = btn.dataset.id;
   if(currentUser && uid === currentUser.uid){ alert('현재 로그인된 계정은 삭제할 수 없습니다.'); return; }
   if(!await customConfirm(`'${id}' 계정을 삭제할까요?`)) return;
@@ -2133,7 +2181,7 @@ ensureBootstrapAdmin().finally(()=>{
   if(user){
     PROFILES.doc(user.uid).get().then(doc=>{
       if(doc.exists){
-        currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role };
+        currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role, displayName: doc.data().displayName || doc.data().name || doc.data().id };
         enterApp();
       } else {
         auth.signOut().finally(()=>showLogin());
