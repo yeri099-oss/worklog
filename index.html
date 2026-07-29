@@ -205,6 +205,10 @@
   .entry .note-col.progress{ background:var(--seal); color:#fff; }
   .entry .note-col.wait{ background:var(--yellow); color:var(--ink); }
   .dday{ font-size:9px; font-weight:700; opacity:.85; }
+  .owner-tag{
+    font-size:9px; font-weight:700; color:var(--seal); background:var(--seal-soft);
+    border-radius:4px; padding:1px 4px; margin-right:5px; white-space:nowrap; flex:none;
+  }
 
   .empty-state{
     text-align:center; padding: 40px 20px; color: var(--ink-soft);
@@ -450,6 +454,10 @@
   <div class="month-select-wrap">
     <button class="month-select-btn" id="monthSelectBtn">7월 ▾</button>
     <div class="month-dropdown" id="monthDropdown"></div>
+    <span class="month-select-wrap" id="ownerSelectWrap" style="display:none; margin-left:10px;">
+      <button class="month-select-btn" id="ownerSelectBtn" style="font-size:13px;">작성자: 전체 ▾</button>
+      <div class="month-dropdown" id="ownerDropdown"></div>
+    </span>
   </div>
 
   <div class="search-bar">
@@ -631,8 +639,9 @@ const RECURRING_TASKS = ['리뷰현황','은행거래내역','메일'];
 function updateCheckinBar(){
   const bar = document.getElementById('checkinBar');
   if(!bar) return;
+  if(!currentUser){ bar.style.display = 'none'; return; }
   if(selectedDate !== todayStr()){ bar.style.display = 'none'; return; }
-  const todays = allEntries.filter(e=>e.date===selectedDate);
+  const todays = allEntries.filter(e=>e.date===selectedDate && e.ownerUid===currentUser.uid);
   const hasAll = RECURRING_TASKS.every(cat => todays.some(e=>e.category===cat));
   bar.style.display = hasAll ? 'none' : 'flex';
 }
@@ -657,6 +666,8 @@ document.getElementById('checkinBtn').onclick = async ()=>{
         category: it.category,
         content: it.content,
         note: it.note,
+        ownerUid: currentUser.uid,
+        ownerName: currentUser.id,
         seq: base + idx,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -836,6 +847,8 @@ document.getElementById('addBtn').onclick = async ()=>{
       content: content,
       note: note,
       dueDate: dueDate,
+      ownerUid: currentUser.uid,
+      ownerName: currentUser.id,
       seq: Date.now(),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -860,8 +873,15 @@ document.getElementById('addBtn').onclick = async ()=>{
 let unsubEntries = null;
 function startEntriesSync(){
   if(unsubEntries) return;
-  unsubEntries = ENTRIES.orderBy('date','desc').onSnapshot(snap=>{
+  const isAdminUser = currentUser && currentUser.role === 'admin';
+  const query = isAdminUser
+    ? ENTRIES.orderBy('date','desc')
+    : ENTRIES.where('ownerUid','==', currentUser.uid); // 단일 필드 조건이라 별도 색인 없이 동작, 정렬은 클라이언트에서
+  unsubEntries = query.onSnapshot(snap=>{
     allEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    if(!isAdminUser){
+      allEntries.sort((a,b)=> a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    }
     renderList();
     updateCheckinBar();
     autoCarryOverUnfinished();
@@ -890,14 +910,19 @@ async function initCarryOverConfig(){
   return carryOverConfig;
 }
 async function autoCarryOverUnfinished(){
+  if(!currentUser) return;
   const today = todayStr();
   if(carryOverCheckedFor === today) return;
   carryOverCheckedFor = today;
   const cfg = await initCarryOverConfig();
-  const yesterday = shiftDate(today, -1);
-  if(yesterday < cfg.activatedOn) return; // 기존에 있던 업무일지에는 소급 적용하지 않음
-  const yestUnfinished = allEntries.filter(e=>e.date===yesterday && (e.note==='진행중' || e.note==='대기중') && !e.carriedOverDone);
-  const toCopy = yestUnfinished;
+  // '어제'만 보지 않고, 활성화 기준일 이후 ~ 오늘 이전 날짜 중 아직 이월 처리 안 된 미완료 항목을 모두 찾는다
+  // (며칠 접속을 안 해도 마지막 상태 그대로 오늘로 이어지도록)
+  const toCopy = allEntries.filter(e=>
+    e.date < today && e.date >= cfg.activatedOn &&
+    e.ownerUid===currentUser.uid &&
+    (e.note==='진행중' || e.note==='대기중') &&
+    !e.carriedOverDone
+  );
   if(!toCopy.length) return;
   const base = Date.now();
   const batch = db.batch();
@@ -909,15 +934,17 @@ async function autoCarryOverUnfinished(){
       content: y.content,
       note: y.note,
       dueDate: y.dueDate || '',
+      ownerUid: currentUser.uid,
+      ownerName: currentUser.id,
       seq: base + idx,
-      carriedFrom: yesterday,
+      carriedFrom: y.date,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     batch.update(ENTRIES.doc(y.id), { carriedOverDone: true });
   });
   try{
     await batch.commit();
-    logAction('전날 미완료 업무 이월', `${yesterday} → ${today} (${toCopy.length}건)`);
+    logAction('미완료 업무 이월', `→ ${today} (${toCopy.length}건)`);
   }catch(err){
     console.error('이월 실패', err);
     carryOverCheckedFor = null; // 실패 시 다음 스냅샷에서 재시도
@@ -978,6 +1005,47 @@ document.addEventListener('click', (e)=>{
   }
 });
 
+let ownerFilter = 'all'; // 'all' 또는 특정 ownerUid (관리자만 사용)
+function availableOwners(){
+  const map = new Map();
+  allEntries.forEach(e=>{
+    if(e.ownerUid) map.set(e.ownerUid, e.ownerName || e.ownerUid);
+  });
+  return [...map.entries()];
+}
+function updateOwnerBtnLabel(){
+  const btn = document.getElementById('ownerSelectBtn');
+  if(!btn) return;
+  if(ownerFilter === 'all'){ btn.textContent = '작성자: 전체 ▾'; return; }
+  const found = availableOwners().find(([uid])=>uid===ownerFilter);
+  btn.textContent = `작성자: ${found ? found[1] : '전체'} ▾`;
+}
+function renderOwnerDropdown(){
+  const wrap = document.getElementById('ownerDropdown');
+  const owners = availableOwners();
+  const allOpt = `<div class="month-opt ${ownerFilter==='all'?'active':''}" data-uid="all">전체</div>`;
+  const opts = owners.map(([uid,name])=>`<div class="month-opt ${ownerFilter===uid?'active':''}" data-uid="${escapeAttr(uid)}">${escapeHtml(name)}</div>`).join('');
+  wrap.innerHTML = allOpt + opts;
+}
+document.getElementById('ownerSelectBtn').onclick = (e)=>{
+  e.stopPropagation();
+  renderOwnerDropdown();
+  document.getElementById('ownerDropdown').classList.toggle('open');
+};
+document.getElementById('ownerDropdown').addEventListener('click', (e)=>{
+  const opt = e.target.closest('.month-opt');
+  if(!opt) return;
+  ownerFilter = opt.dataset.uid;
+  document.getElementById('ownerDropdown').classList.remove('open');
+  updateOwnerBtnLabel();
+  renderList();
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#ownerSelectWrap')){
+    document.getElementById('ownerDropdown').classList.remove('open');
+  }
+});
+
 function doSearch(){
   const q = document.getElementById('searchInput').value.trim();
   if(!q) return;
@@ -1027,6 +1095,13 @@ function renderList(){
     scoped = allEntries.filter(e => e.date.slice(0,7) === currentMonth);
   }
 
+  const isAdminUser = currentUser && currentUser.role === 'admin';
+  document.getElementById('ownerSelectWrap').style.display = isAdminUser ? 'inline-block' : 'none';
+  if(isAdminUser && ownerFilter !== 'all'){
+    scoped = scoped.filter(e => e.ownerUid === ownerFilter);
+  }
+  if(isAdminUser){ updateOwnerBtnLabel(); }
+
   document.getElementById('filterBar').style.display = listMode === 'month' ? 'none' : 'flex';
   document.getElementById('filterLabel').textContent = filterLabel;
 
@@ -1049,10 +1124,11 @@ function renderList(){
       const note = e.note || '';
       const cls = noteClass(note);
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
+      const ownerTag = (isAdminUser && e.ownerName) ? `<span class="owner-tag">${escapeHtml(e.ownerName)}</span>` : '';
       return `
         <div class="entry" data-id="${e.id}">
           <span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>
-          <span class="cat">${escapeHtml(e.category)}</span>
+          <span class="cat">${ownerTag}${escapeHtml(e.category)}</span>
           <span class="content-line">${escapeHtml(e.content)}</span>
           <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
@@ -1254,28 +1330,37 @@ document.getElementById('editDelete').onclick = async ()=>{
 
 /* ============ Excel export ============ */
 document.getElementById('exportBtn').onclick = ()=>{
-  const monthEntries = allEntries.filter(e=>e.date.slice(0,7)===currentMonth);
+  const isAdminUser = currentUser && currentUser.role === 'admin';
+  let monthEntries = allEntries.filter(e=>e.date.slice(0,7)===currentMonth);
+  if(isAdminUser && ownerFilter !== 'all'){
+    monthEntries = monthEntries.filter(e=>e.ownerUid===ownerFilter);
+  }
   if(!monthEntries.length){ alert('이 달에 내보낼 업무일지가 없습니다.'); return; }
   const byDate = {};
   monthEntries.forEach(e=>{ (byDate[e.date] = byDate[e.date] || []).push(e); });
   const dates = Object.keys(byDate).sort((a,b)=> a<b?1:-1);
+  const showOwnerCol = isAdminUser && ownerFilter === 'all';
   const rows = [];
   dates.forEach(d=>{
     const {day, wd} = fmtLabel(d);
     const entries = sortEntries(byDate[d]);
     entries.forEach((e, idx)=>{
-      rows.push({
+      const row = {
         '일': idx===0 ? day : '',
         '요일': idx===0 ? wd+'요일' : '',
         '구분': e.category,
         '내용': e.content,
         '비고': e.note || ''
-      });
+      };
+      if(showOwnerCol) row['작성자'] = e.ownerName || '';
+      rows.push(row);
     });
   });
   try{
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:5},{wch:8},{wch:16},{wch:60},{wch:10}];
+    ws['!cols'] = showOwnerCol
+      ? [{wch:5},{wch:8},{wch:16},{wch:60},{wch:10},{wch:12}]
+      : [{wch:5},{wch:8},{wch:16},{wch:60},{wch:10}];
     const wb = XLSX.utils.book_new();
     const mm = parseInt(currentMonth.slice(5,7), 10);
     XLSX.utils.book_append_sheet(wb, ws, `${mm}월`);
@@ -1302,7 +1387,7 @@ function buildReport(){
   const {day, wd, month, year} = fmtLabel(reportDate);
   document.getElementById('reportTitleText').textContent = `${month}월 ${day}일 업무 보고`;
   document.getElementById('reportCaptureTitle').textContent = `${year}년 ${month}월 ${day}일 (${wd}) 업무일지`;
-  const entries = allEntries.filter(e=>e.date===reportDate).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+  const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===currentUser.uid)).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   const bodyEl = document.getElementById('reportCaptureBody');
   if(!entries.length){
     bodyEl.innerHTML = `<div class="rc-empty">기록된 업무가 없습니다.</div>`;
@@ -1342,7 +1427,7 @@ function showToast(msg){
 
 document.getElementById('reportTextCopy').onclick = async ()=>{
   const {day, wd, month, year} = fmtLabel(reportDate);
-  const entries = allEntries.filter(e=>e.date===reportDate).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+  const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===currentUser.uid)).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   let text = `${year}년 ${month}월 ${day}일 (${wd}) 업무일지\n\n`;
   if(!entries.length){
     text += '(기록된 업무가 없습니다)';
