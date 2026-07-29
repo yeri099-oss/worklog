@@ -1648,9 +1648,20 @@ async function ensureBootstrapAdmin(){
   }catch(e){ /* offline: 로그인 시도할 때 오류로 안내됨 */ }
 }
 
+function teardownSubscriptions(){
+  if(unsubEntries){ unsubEntries(); unsubEntries = null; }
+  if(unsubMeta){ unsubMeta(); unsubMeta = null; }
+  if(unsubProfiles){ unsubProfiles(); unsubProfiles = null; }
+  if(unsubLogs){ unsubLogs(); unsubLogs = null; }
+  if(unsubRecurring){ unsubRecurring(); unsubRecurring = null; }
+  allEntries = [];
+  recurringTasks = [];
+  carryOverCheckedFor = null;
+}
+
 auth.onAuthStateChanged(async (user)=>{
   if(bootstrapping) return; // 부트스트랩 끝나기 전에는 무시 (아래 boot 절차에서 처리)
-  if(!user){ currentUser = null; showLogin(); return; }
+  if(!user){ currentUser = null; teardownSubscriptions(); showLogin(); return; }
   try{
     const doc = await PROFILES.doc(user.uid).get();
     if(!doc.exists){
