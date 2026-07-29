@@ -208,10 +208,15 @@
   .entry .note-col.stale{ background:var(--danger); color:#fff; }
   .rc-row .rc-note-col.stale{ background:var(--danger); color:#fff; }
   .dday{ font-size:9px; font-weight:700; opacity:.85; }
-  .owner-tag{
-    font-size:9px; font-weight:700; color:var(--seal); background:var(--seal-soft);
-    border-radius:4px; padding:1px 4px; margin-right:5px; white-space:nowrap; flex:none;
+  .owner-group{ display:flex; align-items:stretch; border-bottom:1px solid var(--rule-strong); }
+  .owner-group:last-child{ border-bottom:none; }
+  .owner-cell{
+    flex:none; width:64px; display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:11.5px; font-weight:700; color:#fff; background:var(--ink-soft);
+    padding:8px 6px; word-break:break-word;
   }
+  .owner-rows{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .owner-rows .entry:last-child{ border-bottom:none; }
 
   .empty-state{
     text-align:center; padding: 40px 20px; color: var(--ink-soft);
@@ -1310,22 +1315,49 @@ function renderList(){
     return;
   }
 
+  const groupedView = isAdminUser && ownerFilter === 'all';
+
   document.getElementById('listWrap').innerHTML = dates.map(dateStr=>{
     const {day, wd, month} = fmtLabel(dateStr);
     const entries = sortEntries(byDate[dateStr]);
-    const rows = entries.map(e=>{
+
+    function buildRow(e){
       const note = e.note || '';
       const cls = noteClass(note) + (isStaleEntry(e) ? ' stale' : '');
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
-      const ownerTag = (isAdminUser && e.ownerName) ? `<span class="owner-tag">${escapeHtml(e.ownerName)}</span>` : '';
+      const handle = groupedView ? '' : `<span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>`;
       return `
         <div class="entry" data-id="${e.id}">
-          <span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>
-          <span class="cat">${ownerTag}${escapeHtml(e.category)}</span>
+          ${handle}
+          <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line">${escapeHtml(e.content)}</span>
           <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
-    }).join('');
+    }
+
+    let rowsHtml;
+    if(groupedView){
+      // 작성자별로 모아서, 큰 이름 칸 하나가 그 사람 항목들을 위아래로 감싸도록 구성
+      const order = [];
+      const map = new Map();
+      entries.forEach(e=>{
+        const key = e.ownerUid || 'none';
+        if(!map.has(key)){ map.set(key, []); order.push(key); }
+        map.get(key).push(e);
+      });
+      rowsHtml = order.map(key=>{
+        const group = map.get(key);
+        const ownerName = group[0].ownerName || '(작성자 없음)';
+        return `
+          <div class="owner-group">
+            <div class="owner-cell">${escapeHtml(ownerName)}</div>
+            <div class="owner-rows">${group.map(buildRow).join('')}</div>
+          </div>`;
+      }).join('');
+    } else {
+      rowsHtml = entries.map(buildRow).join('');
+    }
+
     return `
       <div class="day-group">
         <div class="day-head">
@@ -1334,7 +1366,7 @@ function renderList(){
           <span class="ym">${month}월</span>
         </div>
         <div class="day-entries" data-date="${dateStr}">
-          ${rows}
+          ${rowsHtml}
         </div>
       </div>`;
   }).join('');
