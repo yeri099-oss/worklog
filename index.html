@@ -30,6 +30,7 @@
     --slate: #64748B;
     --slate-soft: #EEF1F4;
     --yellow: #EAB308;
+    --danger: #DC2626;
     --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 20px rgba(31,35,40,.06);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
@@ -142,9 +143,9 @@
     flex:1; text-align:center; font-size:12.5px; padding:7px 4px; border-radius:9px;
     border:1px solid var(--rule-strong); background:var(--paper); color:var(--ink-soft); cursor:pointer;
   }
-  .status-chip.sel-done{ background:var(--seal); border-color:var(--seal); color:#fff; }
-  .status-chip.sel-progress{ background:var(--amber); border-color:var(--amber); color:#fff; }
-  .status-chip.sel-wait{ background:var(--slate); border-color:var(--slate); color:#fff; }
+  .status-chip.sel-done{ background:var(--slate); border-color:var(--slate); color:#fff; }
+  .status-chip.sel-progress{ background:var(--seal); border-color:var(--seal); color:#fff; }
+  .status-chip.sel-wait{ background:var(--yellow); border-color:var(--yellow); color:var(--ink); }
 
   .add-btn{
     width:100%; padding:11px; border:none; border-radius:10px;
@@ -204,6 +205,8 @@
   .entry .note-col.done{ background:var(--slate); color:#fff; }
   .entry .note-col.progress{ background:var(--seal); color:#fff; }
   .entry .note-col.wait{ background:var(--yellow); color:var(--ink); }
+  .entry .note-col.stale{ background:var(--danger); color:#fff; }
+  .rc-row .rc-note-col.stale{ background:var(--danger); color:#fff; }
   .dday{ font-size:9px; font-weight:700; opacity:.85; }
   .owner-tag{
     font-size:9px; font-weight:700; color:var(--seal); background:var(--seal-soft);
@@ -340,6 +343,21 @@
   .log-row{ font-size:11.5px; color:var(--ink-soft); padding:6px 2px; border-bottom:1px dashed var(--rule); line-height:1.5; }
   .log-row:last-child{ border-bottom:none; }
   .log-row .who{ color:var(--ink); font-weight:600; }
+  .team-stat-row{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
+  .team-stat-row:last-child{ border-bottom:none; }
+  .team-stat-row .name{ font-weight:600; flex:none; width:76px; }
+  .team-stat-row .pill{ font-size:11px; padding:2px 8px; border-radius:999px; font-weight:600; }
+  .team-stat-row .pill.total{ background:var(--rule); color:var(--ink-soft); }
+  .team-stat-row .pill.done{ background:var(--slate); color:#fff; }
+  .team-stat-row .pill.progress{ background:var(--seal); color:#fff; }
+  .team-stat-row .pill.wait{ background:var(--yellow); color:var(--ink); }
+  .pending-row{ padding:10px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
+  .pending-row:last-child{ border-bottom:none; }
+  .pending-row .meta{ color:var(--ink-soft); font-size:11.5px; margin:2px 0 8px; }
+  .pending-row .btns{ display:flex; gap:8px; }
+  .pending-row .btns button{ flex:1; padding:7px; border-radius:8px; font-size:12.5px; cursor:pointer; font-family:inherit; border:1px solid var(--rule-strong); background:transparent; }
+  .pending-row .btns .approve{ color:#fff; background:var(--seal); border-color:var(--seal); }
+  .pending-row .btns .reject{ color:var(--seal); background:var(--seal-soft); border-color:var(--seal); }
   .del-btn{ margin-left:auto; font-size:11px; color:var(--seal); background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:4px 10px; cursor:pointer; font-family:inherit; }
 
   /* ===== Mobile ===== */
@@ -374,11 +392,41 @@
   <div class="login-box">
     <img class="brand-mark" src="data:image/png;base64,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" alt="업무일지">
     <h2>업무일지</h2>
-    <div class="sub">아이디와 비밀번호를 입력해주세요</div>
-    <div class="field"><input type="text" id="loginId" placeholder="아이디" autocapitalize="off" autocomplete="username"></div>
-    <div class="field"><input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password"></div>
-    <button class="add-btn" id="loginBtn">로그인</button>
-    <div class="login-err" id="loginErr"></div>
+
+    <div id="loginPanel">
+      <div class="sub">아이디와 비밀번호를 입력해주세요</div>
+      <div class="field"><input type="text" id="loginId" placeholder="아이디" autocapitalize="off" autocomplete="username"></div>
+      <div class="field"><input type="password" id="loginPw" placeholder="비밀번호" autocomplete="current-password"></div>
+      <button class="add-btn" id="loginBtn">로그인</button>
+      <div class="login-err" id="loginErr"></div>
+      <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:12px;">
+        <span id="showSignupLink" style="color:var(--seal); text-decoration:underline; cursor:pointer;">회원가입</span>
+        <span id="showFindLink" style="color:var(--ink-soft); text-decoration:underline; cursor:pointer;">아이디 · 비밀번호 찾기</span>
+      </div>
+    </div>
+
+    <div id="signupPanel" style="display:none;">
+      <div class="sub">이름, 아이디, 비밀번호, 이메일을 입력해주세요</div>
+      <div class="field"><input type="text" id="signupName" placeholder="이름"></div>
+      <div class="field"><input type="text" id="signupId" placeholder="아이디 (영문/숫자, -, _)" autocapitalize="off"></div>
+      <div class="field"><input type="password" id="signupPw" placeholder="비밀번호 (6자 이상)"></div>
+      <div class="field"><input type="email" id="signupEmail" placeholder="이메일"></div>
+      <button class="add-btn" id="signupBtn">회원가입</button>
+      <div class="login-err" id="signupErr"></div>
+      <div style="text-align:center; margin-top:12px; font-size:12px;">
+        <span id="showLoginFromSignup" style="color:var(--ink-soft); text-decoration:underline; cursor:pointer;">로그인 화면으로</span>
+      </div>
+    </div>
+
+    <div id="findPanel" style="display:none;">
+      <div class="sub">가입할 때 입력한 이메일로 아이디 확인 및 비밀번호 재설정 메일을 보내드려요</div>
+      <div class="field"><input type="email" id="findEmail" placeholder="가입 시 입력한 이메일"></div>
+      <button class="add-btn" id="findBtn">재설정 메일 보내기</button>
+      <div class="login-err" id="findErr"></div>
+      <div style="text-align:center; margin-top:12px; font-size:12px;">
+        <span id="showLoginFromFind" style="color:var(--ink-soft); text-decoration:underline; cursor:pointer;">로그인 화면으로</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -395,6 +443,7 @@
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
+      <button class="logout" id="pwChangeBtn">비밀번호 변경</button>
       <button class="logout" id="logoutBtn">로그아웃</button>
     </div>
   </div>
@@ -490,6 +539,16 @@
 
 <div id="tabSettings" style="display:none;">
   <div class="settings-card">
+    <h4>오늘 팀 현황</h4>
+    <div id="teamTodayStat"></div>
+  </div>
+
+  <div class="settings-card">
+    <h4>가입 승인 대기</h4>
+    <div id="pendingList"></div>
+  </div>
+
+  <div class="settings-card">
     <h4>계정 관리</h4>
     <div id="acctList"></div>
     <div class="add-acct-form">
@@ -538,6 +597,21 @@
       <button class="danger" id="editDelete">삭제</button>
       <button class="primary" id="editSave">저장</button>
     </div>
+  </div>
+</div>
+
+<!-- Password change modal -->
+<div class="overlay center-modal" id="pwChangeOverlay">
+  <div class="sheet" style="max-width:360px;">
+    <h3>비밀번호 변경 <span class="x" id="pwChangeClose">닫기 ✕</span></h3>
+    <label class="field-label">현재 비밀번호</label>
+    <div class="field"><input type="password" id="pwCurrentInput"></div>
+    <label class="field-label">새 비밀번호 (6자 이상)</label>
+    <div class="field"><input type="password" id="pwNewInput"></div>
+    <label class="field-label">새 비밀번호 확인</label>
+    <div class="field"><input type="password" id="pwNewInput2"></div>
+    <div class="err" id="pwChangeErr" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:6px;"></div>
+    <button class="add-btn" id="pwChangeSaveBtn">변경하기</button>
   </div>
 </div>
 
@@ -997,6 +1071,7 @@ function startEntriesSync(){
     renderList();
     updateCheckinBar();
     autoCarryOverUnfinished();
+    renderTeamTodayStat();
   }, err=>{
     document.getElementById('listWrap').innerHTML = `<div class="empty-state"><p>불러오기에 실패했습니다.</p><p style="font-size:11px;">${escapeHtml(err.message)}</p></div>`;
   });
@@ -1075,6 +1150,11 @@ function computeDday(dueDate){
   if(diff > 0) return `D-${diff}`;
   if(diff === 0) return 'D+0';
   return `D+${Math.abs(diff)}`;
+}
+function isStaleEntry(e){
+  if(!e.dueDate || e.note === '완료') return false;
+  const diff = Math.round((parseDate(todayStr()) - parseDate(e.dueDate)) / 86400000);
+  return diff >= 7;
 }
 
 function availableMonths(){
@@ -1234,7 +1314,7 @@ function renderList(){
     const entries = sortEntries(byDate[dateStr]);
     const rows = entries.map(e=>{
       const note = e.note || '';
-      const cls = noteClass(note);
+      const cls = noteClass(note) + (isStaleEntry(e) ? ' stale' : '');
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
       const ownerTag = (isAdminUser && e.ownerName) ? `<span class="owner-tag">${escapeHtml(e.ownerName)}</span>` : '';
       return `
@@ -1506,11 +1586,12 @@ function buildReport(){
     bodyEl.innerHTML = entries.map(e=>{
       const note = e.note || '';
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
+      const rcCls = noteClass(note) + (isStaleEntry(e) ? ' stale' : '');
       return `
         <div class="rc-row">
           <span class="rc-cat">${escapeHtml(e.category)}</span>
           <span class="rc-content">${escapeHtml(e.content)}</span>
-          <span class="rc-note-col ${noteClass(note)}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
+          <span class="rc-note-col ${rcCls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }).join('');
   }
@@ -1670,6 +1751,11 @@ auth.onAuthStateChanged(async (user)=>{
       showLogin('이 계정은 더 이상 사용할 수 없습니다.');
       return;
     }
+    if(doc.data().approved === false){
+      await auth.signOut();
+      showLogin('가입 승인 대기 중입니다. 관리자 승인 후 이용할 수 있어요.');
+      return;
+    }
     currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role };
     enterApp();
   }catch(e){
@@ -1680,6 +1766,7 @@ auth.onAuthStateChanged(async (user)=>{
 function showLogin(errMsg){
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('appRoot').style.display = 'none';
+  showAuthPanel('loginPanel');
   document.getElementById('loginId').value = '';
   document.getElementById('loginPw').value = '';
   document.getElementById('loginErr').textContent = errMsg || '';
@@ -1710,6 +1797,17 @@ document.getElementById('loginPw').addEventListener('keydown', e=>{ if(e.key==='
 document.getElementById('loginId').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
 let pendingLoginLog = false;
+async function resolveAuthEmail(id){
+  try{
+    const snap = await PROFILES.where('id','==', id).limit(1).get();
+    if(!snap.empty){
+      const data = snap.docs[0].data();
+      if(data.authEmail) return data.authEmail;
+    }
+  }catch(e){ /* 조회 실패 시 기본값 사용 */ }
+  return toPseudoEmail(id);
+}
+
 async function doLogin(){
   const id = document.getElementById('loginId').value.trim();
   const pw = document.getElementById('loginPw').value;
@@ -1719,8 +1817,9 @@ async function doLogin(){
   const btn = document.getElementById('loginBtn');
   btn.disabled = true; btn.textContent = '확인 중…';
   try{
+    const authEmail = await resolveAuthEmail(id);
     pendingLoginLog = true;
-    await auth.signInWithEmailAndPassword(toPseudoEmail(id), pw);
+    await auth.signInWithEmailAndPassword(authEmail, pw);
   }catch(e){
     pendingLoginLog = false;
     errEl.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
@@ -1729,6 +1828,101 @@ async function doLogin(){
   }
 }
 
+/* ============ Signup / Find account ============ */
+function showAuthPanel(name){
+  ['loginPanel','signupPanel','findPanel'].forEach(p=>{
+    document.getElementById(p).style.display = (p===name) ? 'block' : 'none';
+  });
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('signupErr').textContent = '';
+  document.getElementById('findErr').textContent = '';
+}
+document.getElementById('showSignupLink').onclick = ()=>showAuthPanel('signupPanel');
+document.getElementById('showFindLink').onclick = ()=>showAuthPanel('findPanel');
+document.getElementById('showLoginFromSignup').onclick = ()=>showAuthPanel('loginPanel');
+document.getElementById('showLoginFromFind').onclick = ()=>showAuthPanel('loginPanel');
+
+document.getElementById('signupBtn').onclick = async ()=>{
+  const name = document.getElementById('signupName').value.trim();
+  const id = document.getElementById('signupId').value.trim();
+  const pw = document.getElementById('signupPw').value;
+  const email = document.getElementById('signupEmail').value.trim();
+  const err = document.getElementById('signupErr');
+  err.textContent = '';
+  if(!name || !id || !pw || !email){ err.textContent = '모든 칸을 입력해주세요.'; return; }
+  if(!/^[a-zA-Z0-9_-]+$/.test(id)){ err.textContent = '아이디는 영문, 숫자, -, _ 만 사용할 수 있습니다.'; return; }
+  if(pw.length < 6){ err.textContent = '비밀번호는 6자 이상이어야 합니다.'; return; }
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = '가입 중…';
+  try{
+    const existing = await PROFILES.where('id','==', id).limit(1).get();
+    if(!existing.empty){ err.textContent = '이미 사용 중인 아이디입니다.'; return; }
+    const cred = await auth.createUserWithEmailAndPassword(email, pw);
+    await cred.user.updateProfile({ displayName: id });
+    await PROFILES.doc(cred.user.uid).set({
+      id, name, email, authEmail: email, role: 'user', approved: false
+    });
+    await auth.signOut();
+    showAuthPanel('loginPanel');
+    document.getElementById('loginErr').textContent = '가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있어요.';
+    document.getElementById('signupName').value = '';
+    document.getElementById('signupId').value = '';
+    document.getElementById('signupPw').value = '';
+    document.getElementById('signupEmail').value = '';
+  }catch(e){
+    err.textContent = e.code === 'auth/email-already-in-use' ? '이미 가입된 이메일입니다.' : ('가입 실패: ' + e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '회원가입';
+  }
+};
+
+document.getElementById('findBtn').onclick = async ()=>{
+  const email = document.getElementById('findEmail').value.trim();
+  const err = document.getElementById('findErr');
+  err.textContent = '';
+  if(!email){ err.textContent = '이메일을 입력해주세요.'; return; }
+  const btn = document.getElementById('findBtn');
+  btn.disabled = true; btn.textContent = '전송 중…';
+  try{
+    await auth.sendPasswordResetEmail(email);
+  }catch(e){ /* 계정 존재 여부를 노출하지 않기 위해 실패해도 동일 안내 */ }
+  err.style.color = 'var(--seal)';
+  err.textContent = '입력하신 이메일로 재설정 메일을 보냈어요 (가입된 계정이 없으면 메일이 오지 않아요). 메일에서 아이디를 확인하고 링크로 새 비밀번호를 설정해주세요.';
+  btn.disabled = false; btn.textContent = '재설정 메일 보내기';
+};
+
+document.getElementById('pwChangeBtn').onclick = ()=>{
+  document.getElementById('pwCurrentInput').value = '';
+  document.getElementById('pwNewInput').value = '';
+  document.getElementById('pwNewInput2').value = '';
+  document.getElementById('pwChangeErr').textContent = '';
+  document.getElementById('pwChangeOverlay').classList.add('open');
+};
+document.getElementById('pwChangeClose').onclick = ()=>{ document.getElementById('pwChangeOverlay').classList.remove('open'); };
+document.getElementById('pwChangeSaveBtn').onclick = async ()=>{
+  const cur = document.getElementById('pwCurrentInput').value;
+  const next = document.getElementById('pwNewInput').value;
+  const next2 = document.getElementById('pwNewInput2').value;
+  const err = document.getElementById('pwChangeErr');
+  err.textContent = '';
+  if(!cur || !next || !next2){ err.textContent = '모든 칸을 입력해주세요.'; return; }
+  if(next.length < 6){ err.textContent = '새 비밀번호는 6자 이상이어야 합니다.'; return; }
+  if(next !== next2){ err.textContent = '새 비밀번호가 서로 일치하지 않습니다.'; return; }
+  const btn = document.getElementById('pwChangeSaveBtn');
+  btn.disabled = true; btn.textContent = '변경 중…';
+  try{
+    const user = auth.currentUser;
+    const cred = firebase.auth.EmailAuthProvider.credential(user.email, cur);
+    await user.reauthenticateWithCredential(cred);
+    await user.updatePassword(next);
+    logAction('비밀번호 변경');
+    document.getElementById('pwChangeOverlay').classList.remove('open');
+  }catch(e){
+    err.textContent = e.code === 'auth/wrong-password' ? '현재 비밀번호가 올바르지 않습니다.' : ('변경 실패: ' + e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = '변경하기';
+  }
+};
 document.getElementById('logoutBtn').onclick = async ()=>{
   logAction('로그아웃');
   try{ await auth.signOut(); }catch(e){}
@@ -1757,14 +1951,16 @@ function startProfilesSync(){
   unsubProfiles = PROFILES.onSnapshot(snap=>{
     accountsCache = snap.docs.map(d=>({ uid:d.id, ...d.data() }));
     renderAccounts();
+    renderPendingList();
   }, ()=>{});
 }
 
 function renderAccounts(){
   const wrap = document.getElementById('acctList');
-  if(!accountsCache.length){ wrap.innerHTML = '<div class="acct-row">등록된 계정이 없습니다.</div>'; return; }
-  const adminCount = accountsCache.filter(a=>a.role==='admin').length;
-  wrap.innerHTML = accountsCache.map(a=>{
+  const approvedAccounts = accountsCache.filter(a => a.approved !== false);
+  if(!approvedAccounts.length){ wrap.innerHTML = '<div class="acct-row">등록된 계정이 없습니다.</div>'; return; }
+  const adminCount = approvedAccounts.filter(a=>a.role==='admin').length;
+  wrap.innerHTML = approvedAccounts.map(a=>{
     const isLastAdmin = a.role==='admin' && adminCount<=1;
     return `<div class="acct-row">
       <span class="id">${escapeHtml(a.id)}</span>
@@ -1772,6 +1968,62 @@ function renderAccounts(){
       ${isLastAdmin ? '' : `<button class="del-btn" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}">삭제</button>`}
     </div>`;
   }).join('');
+}
+function renderPendingList(){
+  const wrap = document.getElementById('pendingList');
+  if(!wrap) return;
+  const pending = accountsCache.filter(a => a.approved === false);
+  if(!pending.length){ wrap.innerHTML = '<div class="acct-row">승인 대기 중인 가입 신청이 없습니다.</div>'; return; }
+  wrap.innerHTML = pending.map(a => `
+    <div class="pending-row">
+      <div><b>${escapeHtml(a.name || a.id)}</b> · 아이디: ${escapeHtml(a.id)}</div>
+      <div class="meta">${escapeHtml(a.email || '이메일 없음')}</div>
+      <div class="btns">
+        <button class="approve" data-uid="${escapeAttr(a.uid)}">승인</button>
+        <button class="reject" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}">거부</button>
+      </div>
+    </div>`).join('');
+}
+document.getElementById('pendingList').addEventListener('click', async (e)=>{
+  const approveBtn = e.target.closest('.approve');
+  const rejectBtn = e.target.closest('.reject');
+  if(approveBtn){
+    try{
+      await PROFILES.doc(approveBtn.dataset.uid).update({ approved: true });
+      logAction('가입 승인', approveBtn.dataset.uid);
+    }catch(err){ alert('승인 실패: ' + err.message); }
+  } else if(rejectBtn){
+    if(!await customConfirm(`'${rejectBtn.dataset.id}' 가입 신청을 거부할까요?`)) return;
+    try{
+      await PROFILES.doc(rejectBtn.dataset.uid).delete();
+      logAction('가입 거부', rejectBtn.dataset.id);
+    }catch(err){ alert('거부 실패: ' + err.message); }
+  }
+});
+function renderTeamTodayStat(){
+  const wrap = document.getElementById('teamTodayStat');
+  if(!wrap || !currentUser || currentUser.role !== 'admin') return;
+  const today = todayStr();
+  const todays = allEntries.filter(e => e.date === today);
+  const byOwner = new Map();
+  todays.forEach(e=>{
+    const key = e.ownerName || '(작성자 없음)';
+    if(!byOwner.has(key)) byOwner.set(key, { total:0, done:0, progress:0, wait:0 });
+    const s = byOwner.get(key);
+    s.total++;
+    if(e.note==='완료') s.done++;
+    else if(e.note==='진행중') s.progress++;
+    else if(e.note==='대기중') s.wait++;
+  });
+  if(!byOwner.size){ wrap.innerHTML = '<div class="acct-row">오늘 기록된 업무일지가 없습니다.</div>'; return; }
+  wrap.innerHTML = [...byOwner.entries()].map(([name, s])=>`
+    <div class="team-stat-row">
+      <span class="name">${escapeHtml(name)}</span>
+      <span class="pill total">총 ${s.total}건</span>
+      <span class="pill done">완료 ${s.done}</span>
+      <span class="pill progress">진행중 ${s.progress}</span>
+      <span class="pill wait">대기중 ${s.wait}</span>
+    </div>`).join('');
 }
 document.getElementById('acctList').addEventListener('click', async (e)=>{
   const btn = e.target.closest('.del-btn');
@@ -1805,7 +2057,7 @@ document.getElementById('addAcctBtn').onclick = async ()=>{
   const secondary = firebase.initializeApp(firebaseConfig, 'create-' + Date.now());
   try{
     const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail(id), pw);
-    await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id, role: newAcctRole });
+    await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id, role: newAcctRole, authEmail: toPseudoEmail(id), approved: true });
     await secondary.auth().signOut();
     logAction('계정 추가', `${id} (${newAcctRole==='admin'?'관리자':'일반'})`);
     document.getElementById('newAcctId').value = '';
