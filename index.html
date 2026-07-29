@@ -592,6 +592,7 @@ function pingSync(){
 /* ============ State ============ */
 const WEEKDAYS = ['일','월','화','수','목','금','토'];
 const DEFAULT_CATS = ['은행거래내역','주문&리뷰','리뷰현황','메일','세금계산서','급여','매출확정','매입현황','거래명세서','4대보험','월결제','자금일보','법인카드','급여신고'];
+let currentUser = null; // {uid, id, role} — 초기화 순서 문제(TDZ) 방지를 위해 최상단에서 선언
 let categories = [...DEFAULT_CATS];
 let selectedDate = todayStr();
 let selectedStatus = '';
@@ -1491,7 +1492,6 @@ function escapeAttr(s){ return escapeHtml(s); }
 updateCategoryList();
 
 /* ============ Auth (Firebase Authentication) ============ */
-let currentUser = null; // {uid, id, role}
 let bootstrapping = true;
 
 function logAction(action, detail){
