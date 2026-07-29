@@ -197,6 +197,12 @@
     border-right:1.5px solid var(--rule-strong);
     padding:9px 10px; display:flex; align-items:center; justify-content:flex-start; text-align:left;
   }
+  .entry .insp{
+    flex:none; width:auto; min-width:0; font-size:12px; color:var(--ink-soft);
+    white-space:normal; word-break:break-word; overflow-wrap:anywhere;
+    border-right:1.5px solid var(--rule-strong);
+    padding:9px 10px; display:flex; align-items:center; justify-content:center; text-align:center;
+  }
   .entry .note-col{
     flex:none; width:auto; min-width:56px; padding:9px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
     font-size:10.5px; font-weight:600; white-space:normal; word-break:break-word; overflow-wrap:anywhere;
@@ -298,6 +304,7 @@
   .rc-row:last-child{ border-bottom:none; }
   .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
   .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
+  .rc-row .rc-insp{ flex:none; width:auto; min-width:0; font-size:11px; color:var(--ink-soft); white-space:normal; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
   .rc-row .rc-note-col{
     flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
     font-size:10px; font-weight:600; color:var(--ink-soft); background:transparent;
@@ -364,6 +371,52 @@
   .pending-row .btns button{ flex:1; padding:7px; border-radius:8px; font-size:12.5px; cursor:pointer; font-family:inherit; border:1px solid var(--rule-strong); background:transparent; }
   .pending-row .btns .approve{ color:#fff; background:var(--seal); border-color:var(--seal); }
   .pending-row .btns .reject{ color:var(--seal); background:var(--seal-soft); border-color:var(--seal); }
+
+  /* ===== Checklist ===== */
+  .checklist-subnav{ display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .cl-subnav-btn{
+    font-size:12.5px; padding:7px 13px; border-radius:999px; border:1px solid var(--rule-strong);
+    background:var(--paper-raised); color:var(--ink-soft); cursor:pointer; font-family:inherit;
+  }
+  .cl-subnav-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .cl-calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--rule-strong); border:1px solid var(--rule-strong); border-radius:10px; overflow:hidden; }
+  .cl-cal-dow{ background:var(--paper); text-align:center; font-size:11px; color:var(--ink-soft); padding:6px 0; font-weight:600; }
+  .cl-cal-cell{ background:#fff; min-height:96px; padding:5px; display:flex; flex-direction:column; gap:3px; }
+  .cl-cal-cell.empty{ background:var(--paper); }
+  .cl-cal-cell.today{ background:var(--seal-soft); }
+  .cl-cal-cell.dragover{ outline:2px dashed var(--seal); outline-offset:-2px; }
+  .cl-cal-daynum{ font-size:11px; font-weight:700; color:var(--ink-soft); margin-bottom:2px; }
+  .cl-pill{
+    font-size:9.5px; padding:2px 6px; border-radius:999px; background:var(--seal-soft); color:var(--seal);
+    cursor:grab; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+  }
+  .cl-pill.done{ background:var(--rule); color:var(--ink-soft); text-decoration:line-through; opacity:.75; }
+  .cl-pill.dragging{ opacity:.3; }
+
+  .cl-day-block{ margin-bottom:16px; }
+  .cl-day-head{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:15px; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--rule-strong); }
+  .cl-item-row{ display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px dashed var(--rule); font-size:13px; cursor:pointer; }
+  .cl-item-row:last-child{ border-bottom:none; }
+  .cl-item-row.done .cl-item-text{ text-decoration:line-through; color:var(--ink-soft); }
+  .cl-item-text{ flex:1; min-width:0; }
+  .cl-item-meta{ font-size:11px; color:var(--ink-soft); flex:none; }
+  .cl-item-del{ flex:none; font-size:11px; color:var(--seal); background:none; border:none; cursor:pointer; font-family:inherit; }
+
+  .cl-month-block{ margin-bottom:14px; }
+  .cl-month-head{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:14px; margin-bottom:6px; }
+  .cl-month-pills{ display:flex; flex-wrap:wrap; gap:6px; }
+  .cl-month-pill{
+    font-size:11.5px; padding:5px 10px; border-radius:999px; background:var(--seal-soft); color:var(--seal);
+    cursor:pointer; display:flex; align-items:center; gap:5px;
+  }
+  .cl-month-pill.done{ background:var(--rule); color:var(--ink-soft); text-decoration:line-through; }
+  .cl-month-pill .cl-item-del{ font-size:10px; }
+
+  .cl-tpl-row{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
+  .cl-tpl-row:last-child{ border-bottom:none; }
+  .cl-tpl-row .main{ flex:1; min-width:0; }
+  .cl-tpl-row .tag{ font-size:10.5px; color:var(--ink-soft); background:var(--paper); border:1px solid var(--rule-strong); border-radius:999px; padding:2px 8px; margin-right:6px; }
   .del-btn{ margin-left:auto; font-size:11px; color:var(--seal); background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:4px 10px; cursor:pointer; font-family:inherit; }
 
   /* ===== Mobile ===== */
@@ -381,6 +434,12 @@
       width:100% !important; border-right:none !important;
       padding:6px 2px !important;
     }
+    .entry .insp{
+      width:100% !important; border-right:none !important;
+      border-bottom:1px dashed var(--rule); padding:4px 2px !important;
+      justify-content:flex-start !important; text-align:left !important;
+    }
+    .entry .insp:empty{ display:none; }
     .entry .note-col{
       width:auto !important; min-width:52px; margin-left:0; margin-top:4px;
       flex-direction:row !important; gap:6px; padding:4px 10px !important; border-radius:6px;
@@ -456,6 +515,7 @@
   <div class="header-sub">쓰기 편하게 기록하고, 한 번에 보고하세요</div>
   <div class="tab-bar" id="tabBar">
     <button class="tab-btn active" id="tabBtnWorklog">업무일지</button>
+    <button class="tab-btn" id="tabBtnChecklist">체크리스트</button>
     <button class="tab-btn" id="tabBtnSettings" style="display:none;">설정</button>
   </div>
   </div>
@@ -493,6 +553,11 @@
     <label class="field-label">내용</label>
     <div class="field">
       <textarea id="contentInput"></textarea>
+    </div>
+
+    <label class="field-label">점검 (선택)</label>
+    <div class="field">
+      <input type="text" id="inspectionInput">
     </div>
 
     <label class="field-label">비고</label>
@@ -543,6 +608,77 @@
   <div id="listWrap"></div>
 </div>
 
+<div id="tabChecklist" style="display:none;">
+  <div class="checklist-subnav" id="checklistSubnav">
+    <button class="cl-subnav-btn active" data-view="calendar">달력</button>
+    <button class="cl-subnav-btn" data-view="daily">일별목록</button>
+    <button class="cl-subnav-btn" data-view="monthly">월별루틴</button>
+    <button class="cl-subnav-btn" data-view="templates">반복설정</button>
+  </div>
+
+  <div id="clView-calendar" class="cl-view">
+    <div class="month-select-wrap" style="margin-bottom:12px;">
+      <button class="arrow" id="clCalPrev">‹</button>
+      <span id="clCalLabel" class="serif" style="font-size:17px; font-weight:700; margin:0 10px;"></span>
+      <button class="arrow" id="clCalNext">›</button>
+    </div>
+    <div class="cl-calendar-grid" id="clCalendarGrid"></div>
+  </div>
+
+  <div id="clView-daily" class="cl-view" style="display:none;">
+    <div class="add-card">
+      <label class="field-label">날짜</label>
+      <div class="field"><input type="date" id="clDailyDateInput"></div>
+      <label class="field-label">내용</label>
+      <div class="field"><input type="text" id="clDailyTextInput" placeholder="체크리스트 항목"></div>
+      <button class="add-btn" id="clDailyAddBtn">+ 일별 체크리스트 추가</button>
+    </div>
+    <div class="month-select-wrap" style="margin:14px 0 10px;">
+      <button class="arrow" id="clDailyPrev">‹</button>
+      <span id="clDailyLabel" class="serif" style="font-size:16px; font-weight:700; margin:0 10px;"></span>
+      <button class="arrow" id="clDailyNext">›</button>
+    </div>
+    <div id="clDailyList"></div>
+  </div>
+
+  <div id="clView-monthly" class="cl-view" style="display:none;">
+    <div class="add-card">
+      <label class="field-label">월</label>
+      <div class="field"><input type="month" id="clMonthlyMonthInput"></div>
+      <label class="field-label">내용</label>
+      <div class="field"><input type="text" id="clMonthlyTextInput" placeholder="체크리스트 항목"></div>
+      <button class="add-btn" id="clMonthlyAddBtn">+ 월별 루틴 추가</button>
+    </div>
+    <div class="month-select-wrap" style="margin:14px 0 10px;">
+      <button class="arrow" id="clYearPrev">‹</button>
+      <span id="clYearLabel" class="serif" style="font-size:16px; font-weight:700; margin:0 10px;"></span>
+      <button class="arrow" id="clYearNext">›</button>
+    </div>
+    <div id="clMonthlyList"></div>
+  </div>
+
+  <div id="clView-templates" class="cl-view" style="display:none;">
+    <div class="add-card">
+      <p style="font-size:12px; color:var(--ink-soft); margin:0 0 12px;">여기 등록한 항목은 정해진 주기마다 자동으로 일별 체크리스트에 생성돼요. 달력에서 날짜를 옮겨도 이 기준일은 바뀌지 않고, 다음 번엔 다시 이 날짜로 생성돼요.</p>
+      <label class="field-label">내용</label>
+      <div class="field"><input type="text" id="clTplTextInput" placeholder="예: 급여자료 취합"></div>
+      <label class="field-label">분류 (선택)</label>
+      <div class="field"><input type="text" id="clTplCategoryInput" placeholder="예: 월초, 급여, 분기별 등"></div>
+      <label class="field-label">반복 주기</label>
+      <div class="role-toggle" id="clTplRecurrence" style="margin-bottom:10px;">
+        <div class="chip active" data-v="monthly">매달</div>
+        <div class="chip" data-v="quarterly">분기별(3·6·9·12월)</div>
+        <div class="chip" data-v="semiannual">반기(6·12월)</div>
+        <div class="chip" data-v="annual">연말(12월)</div>
+      </div>
+      <label class="field-label">기준일 (매달/분기·반기·연말 도래 시 이 날짜에 생성)</label>
+      <div class="field"><input type="number" id="clTplDayInput" min="1" max="31" placeholder="예: 5"></div>
+      <button class="add-btn" id="clTplAddBtn">+ 반복 항목 추가</button>
+    </div>
+    <div id="clTemplateList"></div>
+  </div>
+</div>
+
 <div id="tabSettings" style="display:none;">
   <div class="settings-card">
     <h4>오늘 팀 현황</h4>
@@ -590,6 +726,8 @@
     <div class="field"><input type="text" id="editCat" list="catList"></div>
     <label class="field-label">내용</label>
     <div class="field"><textarea id="editContent"></textarea></div>
+    <label class="field-label">점검 (선택)</label>
+    <div class="field"><input type="text" id="editInspection"></div>
     <label class="field-label">비고</label>
     <div class="status-row" id="editStatusRow">
       <div class="status-chip" data-v="완료">완료</div>
@@ -707,6 +845,9 @@ const ENTRIES = db.collection('workLogApp_entries');
 const META = db.collection('workLogApp_meta').doc('categories');
 const PROFILES = db.collection('workLogApp_profiles');
 const LOGS = db.collection('workLogApp_logs');
+const DAILY_CL = db.collection('workLogApp_daily_checklist');
+const MONTHLY_CL = db.collection('workLogApp_monthly_checklist');
+const CL_TEMPLATES = db.collection('workLogApp_checklist_templates');
 const PSEUDO_DOMAIN = '@worklog-app.local';
 function toPseudoEmail(username){ return username.toLowerCase() + PSEUDO_DOMAIN; }
 
@@ -1037,6 +1178,7 @@ function syncEditStatusChips(){
 document.getElementById('addBtn').onclick = async ()=>{
   const cat = document.getElementById('catInput').value.trim();
   const content = document.getElementById('contentInput').value.trim();
+  const inspection = document.getElementById('inspectionInput').value.trim();
   const note = document.getElementById('noteInput').value.trim();
   const dueDate = document.getElementById('dueDateInput').value || '';
   if(!cat || !content){
@@ -1050,6 +1192,7 @@ document.getElementById('addBtn').onclick = async ()=>{
       date: selectedDate,
       category: cat,
       content: content,
+      inspection: inspection,
       note: note,
       dueDate: dueDate,
       ownerUid: currentUser.uid,
@@ -1061,6 +1204,7 @@ document.getElementById('addBtn').onclick = async ()=>{
     rememberCategory(cat);
     document.getElementById('catInput').value = '';
     document.getElementById('contentInput').value = '';
+    document.getElementById('inspectionInput').value = '';
     document.getElementById('noteInput').value = '';
     document.getElementById('dueDateInput').value = '';
     selectedStatus = '';
@@ -1339,11 +1483,13 @@ function renderList(){
       const cls = noteClass(note) + (isStaleEntry(e) ? ' stale' : '');
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
       const handle = groupedView ? '' : `<span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>`;
+      const insp = `<span class="insp">${e.inspection ? escapeHtml(e.inspection) : ''}</span>`;
       return `
         <div class="entry" data-id="${e.id}">
           ${handle}
           <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line">${escapeHtml(e.content)}</span>
+          ${insp}
           <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }
@@ -1403,6 +1549,21 @@ function syncRowColumns(rows, opts){
     noteCells.forEach(c=>{ c.style.width = noteW + 'px'; });
   }
 
+  let inspW = 0;
+  const inspCells = opts.inspSel ? rows.map(r=>r.querySelector(opts.inspSel)).filter(Boolean) : [];
+  const hasAnyInsp = inspCells.some(c => (c.textContent||'').trim().length);
+  if(inspCells.length){
+    if(hasAnyInsp){
+      inspCells.forEach(c=>{ c.style.display = ''; c.style.width = 'max-content'; });
+      inspW = Math.max(...inspCells.map(c=>c.offsetWidth)) + (opts.inspBuffer || 0);
+      inspCells.forEach(c=>{ c.style.width = inspW + 'px'; });
+    } else {
+      // 이 날짜에 점검 내용이 하나도 없으면 칸 자체를 숨겨서 공간을 낭비하지 않음
+      inspCells.forEach(c=>{ c.style.display = 'none'; });
+      inspW = 0;
+    }
+  }
+
   const contentCells = rows.map(r=>r.querySelector(opts.contentSel)).filter(Boolean);
   if(!contentCells.length) return;
 
@@ -1425,7 +1586,7 @@ function syncRowColumns(rows, opts){
 
   const sample = rows[0];
   const rowW = (sample.parentElement || sample).getBoundingClientRect().width;
-  let usedW = catW + noteW;
+  let usedW = catW + noteW + inspW;
   if(opts.handleSel){
     const h = sample.querySelector(opts.handleSel);
     if(h) usedW += h.getBoundingClientRect().width;
@@ -1447,8 +1608,8 @@ function syncAllDayColumns(){
   document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
     const rows = [...container.querySelectorAll('.entry')];
     syncRowColumns(rows, {
-      handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col',
-      catBuffer:14, noteBuffer:14, contentMode:'fill'
+      handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col', inspSel:'.insp',
+      catBuffer:14, noteBuffer:14, inspBuffer:14, contentMode:'fill'
     });
   });
 }
@@ -1531,6 +1692,7 @@ function openEdit(id){
   editingId = id;
   document.getElementById('editCat').value = e.category;
   document.getElementById('editContent').value = e.content;
+  document.getElementById('editInspection').value = e.inspection || '';
   const note = e.note || '';
   document.getElementById('editNote').value = note;
   editSelectedStatus = (note==='완료'||note==='진행중'||note==='대기중') ? note : '';
@@ -1544,11 +1706,12 @@ document.getElementById('editSave').onclick = async ()=>{
   if(!editingId) return;
   const cat = document.getElementById('editCat').value.trim();
   const content = document.getElementById('editContent').value.trim();
+  const inspection = document.getElementById('editInspection').value.trim();
   const note = document.getElementById('editNote').value.trim();
   const dueDate = document.getElementById('editDueDate').value || '';
   if(!cat || !content){ alert('구분과 내용을 입력해주세요.'); return; }
   try{
-    await ENTRIES.doc(editingId).update({ category: cat, content, note, dueDate });
+    await ENTRIES.doc(editingId).update({ category: cat, content, inspection, note, dueDate });
     logAction('업무일지 수정', cat);
     rememberCategory(cat);
     document.getElementById('editOverlay').classList.remove('open');
@@ -1587,6 +1750,7 @@ document.getElementById('exportBtn').onclick = ()=>{
         '요일': idx===0 ? wd+'요일' : '',
         '구분': e.category,
         '내용': e.content,
+        '점검': e.inspection || '',
         '비고': e.note || ''
       };
       if(showOwnerCol) row['작성자'] = e.ownerName || '';
@@ -1596,8 +1760,8 @@ document.getElementById('exportBtn').onclick = ()=>{
   try{
     const ws = XLSX.utils.json_to_sheet(rows);
     ws['!cols'] = showOwnerCol
-      ? [{wch:5},{wch:8},{wch:16},{wch:60},{wch:10},{wch:12}]
-      : [{wch:5},{wch:8},{wch:16},{wch:60},{wch:10}];
+      ? [{wch:5},{wch:8},{wch:16},{wch:60},{wch:16},{wch:10},{wch:12}]
+      : [{wch:5},{wch:8},{wch:16},{wch:60},{wch:16},{wch:10}];
     const wb = XLSX.utils.book_new();
     const mm = parseInt(currentMonth.slice(5,7), 10);
     XLSX.utils.book_append_sheet(wb, ws, `${mm}월`);
@@ -1637,13 +1801,14 @@ function buildReport(){
         <div class="rc-row">
           <span class="rc-cat">${escapeHtml(e.category)}</span>
           <span class="rc-content">${escapeHtml(e.content)}</span>
+          <span class="rc-insp">${e.inspection ? escapeHtml(e.inspection) : ''}</span>
           <span class="rc-note-col ${rcCls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }).join('');
   }
   syncRowColumns(document.querySelectorAll('#reportCaptureBody .rc-row'), {
-    handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col',
-    catBuffer:12, noteBuffer:12, contentMode:'fit'
+    handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col', inspSel:'.rc-insp',
+    catBuffer:12, noteBuffer:12, inspBuffer:12, contentMode:'fit'
   });
   {
     const firstRow = document.querySelector('#reportCaptureBody .rc-row');
@@ -1781,9 +1946,17 @@ function teardownSubscriptions(){
   if(unsubProfiles){ unsubProfiles(); unsubProfiles = null; }
   if(unsubLogs){ unsubLogs(); unsubLogs = null; }
   if(unsubRecurring){ unsubRecurring(); unsubRecurring = null; }
+  if(unsubDailyCL){ unsubDailyCL(); unsubDailyCL = null; }
+  if(unsubMonthlyCL){ unsubMonthlyCL(); unsubMonthlyCL = null; }
+  if(unsubTemplates){ unsubTemplates(); unsubTemplates = null; }
   allEntries = [];
   recurringTasks = [];
   carryOverCheckedFor = null;
+  allDailyChecklist = [];
+  allMonthlyChecklist = [];
+  checklistTemplates = [];
+  materializedMonths = new Set();
+  seedAttempted = false;
 }
 
 let signupInProgress = false;
@@ -1833,6 +2006,9 @@ function enterApp(){
   startProfilesSync();
   startLogsSync();
   startRecurringSync();
+  startDailyChecklistSync();
+  startMonthlyChecklistSync();
+  startTemplatesSync();
   pingSync();
   if(pendingLoginLog){ pendingLoginLog = false; logAction('로그인'); }
   // 로그인 화면이 떠 있는 동안 숨겨진 상태로 폭 계산이 잘못될 수 있어, 화면이 실제로 보이는 시점에 다시 계산
@@ -2010,14 +2186,17 @@ document.getElementById('logoutBtn').onclick = async ()=>{
 
 /* ============ Tabs ============ */
 function switchTab(name){
-  const isWorklog = name==='worklog';
-  document.getElementById('tabWorklog').style.display = isWorklog ? '' : 'none';
-  document.getElementById('tabSettings').style.display = isWorklog ? 'none' : '';
-  document.getElementById('tabBtnWorklog').classList.toggle('active', isWorklog);
-  document.getElementById('tabBtnSettings').classList.toggle('active', !isWorklog);
-  if(isWorklog) syncAllDayColumns();
+  document.getElementById('tabWorklog').style.display = (name==='worklog') ? '' : 'none';
+  document.getElementById('tabChecklist').style.display = (name==='checklist') ? '' : 'none';
+  document.getElementById('tabSettings').style.display = (name==='settings') ? '' : 'none';
+  document.getElementById('tabBtnWorklog').classList.toggle('active', name==='worklog');
+  document.getElementById('tabBtnChecklist').classList.toggle('active', name==='checklist');
+  document.getElementById('tabBtnSettings').classList.toggle('active', name==='settings');
+  if(name==='worklog') syncAllDayColumns();
+  if(name==='checklist') renderChecklistCalendar();
 }
 document.getElementById('tabBtnWorklog').onclick = ()=>switchTab('worklog');
+document.getElementById('tabBtnChecklist').onclick = ()=>switchTab('checklist');
 document.getElementById('tabBtnSettings').onclick = ()=>{
   if(!currentUser || currentUser.role!=='admin') return;
   switchTab('settings');
@@ -2174,6 +2353,387 @@ function startLogsSync(){
     }).join('');
   }, ()=>{});
 }
+
+/* ============ Checklist ============ */
+let clCurrentMonth = todayStr().slice(0,7);
+let clCurrentYear = parseInt(todayStr().slice(0,4), 10);
+let allDailyChecklist = [];
+let allMonthlyChecklist = [];
+let checklistTemplates = [];
+let unsubDailyCL = null;
+let unsubMonthlyCL = null;
+let unsubTemplates = null;
+let materializedMonths = new Set();
+let seedAttempted = false;
+
+function shiftMonth(yearMonth, delta){
+  let [y,m] = yearMonth.split('-').map(Number);
+  m += delta;
+  while(m<1){ m+=12; y-=1; }
+  while(m>12){ m-=12; y+=1; }
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+function dailyChecklistForMonth(yearMonth){
+  return allDailyChecklist.filter(it => it.date && it.date.slice(0,7) === yearMonth);
+}
+
+document.getElementById('checklistSubnav').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.cl-subnav-btn');
+  if(!btn) return;
+  const view = btn.dataset.view;
+  [...document.querySelectorAll('.cl-subnav-btn')].forEach(b=>b.classList.toggle('active', b===btn));
+  ['calendar','daily','monthly','templates'].forEach(v=>{
+    document.getElementById('clView-'+v).style.display = (v===view) ? '' : 'none';
+  });
+  if(view==='calendar') renderChecklistCalendar();
+  if(view==='daily') renderDailyChecklistView();
+  if(view==='monthly') renderMonthlyChecklistView();
+  if(view==='templates') renderTemplateList();
+});
+
+/* ---- Sync ---- */
+function startDailyChecklistSync(){
+  if(unsubDailyCL || !currentUser) return;
+  unsubDailyCL = DAILY_CL.where('ownerUid','==', currentUser.uid).onSnapshot(snap=>{
+    allDailyChecklist = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderChecklistCalendar();
+    renderDailyChecklistView();
+  }, err=>{ console.error('일별 체크리스트 로드 실패', err); });
+}
+function startMonthlyChecklistSync(){
+  if(unsubMonthlyCL || !currentUser) return;
+  unsubMonthlyCL = MONTHLY_CL.where('ownerUid','==', currentUser.uid).onSnapshot(snap=>{
+    allMonthlyChecklist = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderMonthlyChecklistView();
+  }, err=>{ console.error('월별 체크리스트 로드 실패', err); });
+}
+function startTemplatesSync(){
+  if(unsubTemplates || !currentUser) return;
+  unsubTemplates = CL_TEMPLATES.where('ownerUid','==', currentUser.uid).onSnapshot(snap=>{
+    checklistTemplates = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    seedDefaultTemplatesIfNeeded().then(()=> materializeTemplatesForMonth(clCurrentMonth));
+    renderTemplateList();
+  }, err=>{ console.error('반복 체크리스트 로드 실패', err); });
+}
+
+/* ---- Default seed (yeriberry only, first time) ---- */
+const DEFAULT_CHECKLIST_TEMPLATES = [
+  // 월초 (day 5)
+  ['월초','급여자료 취합'], ['월초','연장·야간·휴일수당 확인'], ['월초','4대보험 공제 확인'],
+  ['월초','중소기업 취업자 소득세 감면 대상 확인'], ['월초','급여대장 검토'], ['월초','급여이체'],
+  ['월초','입·퇴사자 취득/상실 신고'], ['월초','보수 변경사항 확인'],
+  ['월초','원천세 신고자료 세무사 전달'], ['월초','원천세 납부 확인'],
+  ['월초','월초 지급거래처 결제'], ['월초','미수 세금계산서 확인']
+].map(([category,text])=>({ text, category, recurrence:'monthly', day:5 }))
+.concat([
+  // 월중 (day 15)
+  ['월중','POS 매출 확인'], ['월중','카드매출 확인'], ['월중','현금영수증 확인'], ['월중','제로페이'],
+  ['월중','카카오페이'], ['월중','비플페이'], ['월중','알리페이'], ['월중','쿠팡이츠 정산 확인'],
+  ['월중','법인카드 전표 확인'], ['월중','개인카드 사용내역 확인'], ['월중','미지급금 확인'],
+  ['월중','선수금 확인'], ['월중','연차 관리'], ['월중','입퇴사 예정자 확인']
+].map(([category,text])=>({ text, category, recurrence:'monthly', day:15 })))
+.concat([
+  // 월말 (day 25)
+  ['월말','거래처 잔액 확인'], ['월말','미지급금 확인'], ['월말','지급일정 작성'], ['월말','세금계산서 미수취 확인'],
+  ['월말','통장잔액 = 이카운트 확인'], ['월말','법인카드 미전표 확인'], ['월말','현금 시재 확인'],
+  ['월말','홈택스 카드매출 대사'], ['월말','카드매입 확인'], ['월말','전자세금계산서 확인'], ['월말','PG사 정산 확인'],
+  ['월말','공통매입세액 안분 대상 여부 확인 (추가)'], ['월말','불공제 매입세액 검토'], ['월말','신고서 검토'],
+  ['월말','급여 충당금 확인'], ['월말','퇴직금 발생 확인'], ['월말','다음달 지급계획 작성'], ['월말','월별 자금계획 업데이트']
+].map(([category,text])=>({ text, category, recurrence:'monthly', day:25 })))
+.concat([
+  // 분기별 (day 25, 3/6/9/12월)
+  ['분기별','부가세 신고자료 검토'], ['분기별','세무사 신고내용 재검토'], ['분기별','신고서 최종 검토'],
+  ['분기별','납부세액 확인'], ['분기별','수정신고 필요 여부 검토']
+].map(([category,text])=>({ text, category, recurrence:'quarterly', day:25 })))
+.concat([
+  // 반기 (day 25, 6/12월)
+  ['반기','지급명세서 제출 확인'], ['반기','사업장현황 점검'], ['반기','채권채무조회서 회신']
+].map(([category,text])=>({ text, category, recurrence:'semiannual', day:25 })))
+.concat([
+  // 연말 (day 20, 12월)
+  ['연말','결산자료 준비'], ['연말','자산실사'], ['연말','재고조사'], ['연말','법인세 자료 준비'], ['연말','연말정산 준비']
+].map(([category,text])=>({ text, category, recurrence:'annual', day:20 })))
+.concat([
+  // 실수 방지 (day 28, 매달)
+  ['실수방지','세무사 신고서 직접 검토'], ['실수방지','공통매입세액 안분 적용 여부 확인'], ['실수방지','불공제 매입세액 확인'],
+  ['실수방지','홈택스 신고서와 세무사 신고서 대조'], ['실수방지','카드매출·PG매출 대사'], ['실수방지','제로페이·비플페이 매출 대사'],
+  ['실수방지','미지급금 잔액 확인'], ['실수방지','장부잔액과 통장잔액 일치 확인']
+].map(([category,text])=>({ text, category, recurrence:'monthly', day:28 })));
+
+async function seedDefaultTemplatesIfNeeded(){
+  if(seedAttempted || !currentUser) return;
+  seedAttempted = true;
+  if(currentUser.id !== 'yeriberry') return;
+  if(checklistTemplates.length > 0) return;
+  const batch = db.batch();
+  DEFAULT_CHECKLIST_TEMPLATES.forEach(t=>{
+    const ref = CL_TEMPLATES.doc();
+    batch.set(ref, { ownerUid: currentUser.uid, text:t.text, category:t.category, recurrence:t.recurrence, day:t.day, lastMaterializedMonth:'' });
+  });
+  try{ await batch.commit(); }catch(e){ console.error('기본 체크리스트 생성 실패', e); }
+}
+
+/* ---- Materialize recurring templates into daily items ---- */
+function shouldMaterialize(recurrence, monthNum){
+  if(recurrence === 'monthly') return true;
+  if(recurrence === 'quarterly') return [3,6,9,12].includes(monthNum);
+  if(recurrence === 'semiannual') return [6,12].includes(monthNum);
+  if(recurrence === 'annual') return monthNum === 12;
+  return false;
+}
+async function materializeTemplatesForMonth(yearMonth){
+  if(!currentUser || !checklistTemplates.length) return;
+  if(materializedMonths.has(yearMonth)) return;
+  materializedMonths.add(yearMonth);
+  const mm = parseInt(yearMonth.slice(5,7), 10);
+  const yyyy = parseInt(yearMonth.slice(0,4), 10);
+  const daysInMonth = new Date(yyyy, mm, 0).getDate();
+  const toMaterialize = checklistTemplates.filter(t => t.lastMaterializedMonth !== yearMonth && shouldMaterialize(t.recurrence, mm));
+  if(!toMaterialize.length) return;
+  const batch = db.batch();
+  const base = Date.now();
+  toMaterialize.forEach((t, idx)=>{
+    const day = Math.min(Math.max(parseInt(t.day,10) || 1, 1), daysInMonth);
+    const dateStr = `${yearMonth}-${String(day).padStart(2,'0')}`;
+    const ref = DAILY_CL.doc();
+    batch.set(ref, {
+      ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+      date: dateStr, text: t.text, category: t.category || '',
+      done:false, completedAt:'', templateId: t.id, seq: base+idx
+    });
+    batch.update(CL_TEMPLATES.doc(t.id), { lastMaterializedMonth: yearMonth });
+  });
+  try{ await batch.commit(); }catch(e){ console.error('체크리스트 생성 실패', e); }
+}
+
+async function toggleDailyItemDone(id){
+  const item = allDailyChecklist.find(x=>x.id===id);
+  if(!item) return;
+  const newDone = !item.done;
+  try{ await DAILY_CL.doc(id).update({ done:newDone, completedAt: newDone ? todayStr() : '' }); }
+  catch(e){ alert('업데이트 실패: ' + e.message); }
+}
+
+/* ---- Calendar view ---- */
+function renderChecklistCalendar(){
+  const grid = document.getElementById('clCalendarGrid');
+  if(!grid || !currentUser) return;
+  const [yyyy, mm] = clCurrentMonth.split('-').map(Number);
+  document.getElementById('clCalLabel').textContent = `${yyyy}년 ${mm}월`;
+  const firstDow = new Date(yyyy, mm-1, 1).getDay();
+  const daysInMonth = new Date(yyyy, mm, 0).getDate();
+  const todayS = todayStr();
+
+  const itemsByDay = {};
+  dailyChecklistForMonth(clCurrentMonth).forEach(it=>{
+    const d = parseInt(it.date.slice(8,10),10);
+    (itemsByDay[d] = itemsByDay[d]||[]).push(it);
+  });
+
+  let html = WEEKDAYS.map(w=>`<div class="cl-cal-dow">${w}</div>`).join('');
+  for(let i=0;i<firstDow;i++) html += `<div class="cl-cal-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${clCurrentMonth}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayS;
+    const items = (itemsByDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+    const pills = items.map(it=>`<span class="cl-pill ${it.done?'done':''}" draggable="true" data-id="${it.id}" title="${escapeAttr(it.text)}">${escapeHtml(it.text)}</span>`).join('');
+    html += `<div class="cl-cal-cell ${isToday?'today':''}" data-date="${dateStr}"><span class="cl-cal-daynum">${d}</span>${pills}</div>`;
+  }
+  grid.innerHTML = html;
+}
+document.getElementById('clCalendarGrid').addEventListener('click', (e)=>{
+  const pill = e.target.closest('.cl-pill');
+  if(!pill) return;
+  toggleDailyItemDone(pill.dataset.id);
+});
+let clDragId = null;
+document.getElementById('clCalendarGrid').addEventListener('dragstart', (e)=>{
+  const pill = e.target.closest('.cl-pill');
+  if(!pill) return;
+  clDragId = pill.dataset.id;
+  pill.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', clDragId);
+});
+document.getElementById('clCalendarGrid').addEventListener('dragend', (e)=>{
+  const pill = e.target.closest('.cl-pill');
+  if(pill) pill.classList.remove('dragging');
+  document.querySelectorAll('.cl-cal-cell.dragover').forEach(c=>c.classList.remove('dragover'));
+  clDragId = null;
+});
+document.getElementById('clCalendarGrid').addEventListener('dragover', (e)=>{
+  if(!clDragId) return;
+  const cell = e.target.closest('.cl-cal-cell');
+  if(!cell || !cell.dataset.date) return;
+  e.preventDefault();
+  cell.classList.add('dragover');
+});
+document.getElementById('clCalendarGrid').addEventListener('dragleave', (e)=>{
+  const cell = e.target.closest('.cl-cal-cell');
+  if(cell) cell.classList.remove('dragover');
+});
+document.getElementById('clCalendarGrid').addEventListener('drop', async (e)=>{
+  e.preventDefault();
+  const cell = e.target.closest('.cl-cal-cell');
+  document.querySelectorAll('.cl-cal-cell.dragover').forEach(c=>c.classList.remove('dragover'));
+  if(!cell || !cell.dataset.date || !clDragId) return;
+  const newDate = cell.dataset.date;
+  const id = clDragId;
+  clDragId = null;
+  try{
+    await DAILY_CL.doc(id).update({ date: newDate });
+    logAction('체크리스트 날짜 이동', newDate);
+  }catch(err){ alert('이동 실패: ' + err.message); }
+});
+document.getElementById('clCalPrev').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,-1); materializeTemplatesForMonth(clCurrentMonth); renderChecklistCalendar(); };
+document.getElementById('clCalNext').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,1); materializeTemplatesForMonth(clCurrentMonth); renderChecklistCalendar(); };
+
+/* ---- Daily list view ---- */
+function renderDailyChecklistView(){
+  const wrap = document.getElementById('clDailyList');
+  if(!wrap || !currentUser) return;
+  const [yyyy, mm] = clCurrentMonth.split('-').map(Number);
+  document.getElementById('clDailyLabel').textContent = `${yyyy}년 ${mm}월`;
+  if(!document.getElementById('clDailyDateInput').value) document.getElementById('clDailyDateInput').value = todayStr();
+  const items = dailyChecklistForMonth(clCurrentMonth);
+  if(!items.length){ wrap.innerHTML = '<div class="acct-row">이 달에 등록된 일별 체크리스트가 없습니다.</div>'; return; }
+  const byDate = {};
+  items.forEach(it=>{ (byDate[it.date]=byDate[it.date]||[]).push(it); });
+  const dates = Object.keys(byDate).sort();
+  wrap.innerHTML = dates.map(d=>{
+    const {day, wd} = fmtLabel(d);
+    const rows = byDate[d].slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(it=>`
+      <div class="cl-item-row ${it.done?'done':''}" data-id="${it.id}">
+        <span class="cl-item-text">${escapeHtml(it.text)}</span>
+        ${it.done ? `<span class="cl-item-meta">완료 ${escapeHtml(it.completedAt||'')}</span>` : ''}
+        <button class="cl-item-del" data-id="${it.id}">삭제</button>
+      </div>`).join('');
+    return `<div class="cl-day-block"><div class="cl-day-head">${day}일 ${wd}요일</div>${rows}</div>`;
+  }).join('');
+}
+document.getElementById('clDailyList').addEventListener('click', async (e)=>{
+  const delBtn = e.target.closest('.cl-item-del');
+  if(delBtn){
+    if(!await customConfirm('이 체크리스트 항목을 삭제할까요?')) return;
+    try{ await DAILY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
+    return;
+  }
+  const row = e.target.closest('.cl-item-row');
+  if(row) toggleDailyItemDone(row.dataset.id);
+});
+document.getElementById('clDailyAddBtn').onclick = async ()=>{
+  const date = document.getElementById('clDailyDateInput').value;
+  const text = document.getElementById('clDailyTextInput').value.trim();
+  if(!date || !text){ alert('날짜와 내용을 입력해주세요.'); return; }
+  try{
+    await DAILY_CL.add({
+      ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+      date, text, category:'', done:false, completedAt:'', templateId:null, seq: Date.now()
+    });
+    document.getElementById('clDailyTextInput').value = '';
+    logAction('체크리스트 추가', text);
+  }catch(err){ alert('추가 실패: ' + err.message); }
+};
+document.getElementById('clDailyPrev').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,-1); materializeTemplatesForMonth(clCurrentMonth); renderDailyChecklistView(); };
+document.getElementById('clDailyNext').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,1); materializeTemplatesForMonth(clCurrentMonth); renderDailyChecklistView(); };
+
+/* ---- Monthly routine view ---- */
+function renderMonthlyChecklistView(){
+  const wrap = document.getElementById('clMonthlyList');
+  if(!wrap || !currentUser) return;
+  document.getElementById('clYearLabel').textContent = `${clCurrentYear}년 루틴`;
+  if(!document.getElementById('clMonthlyMonthInput').value){
+    document.getElementById('clMonthlyMonthInput').value = todayStr().slice(0,7);
+  }
+  const byMonth = {};
+  allMonthlyChecklist.filter(it => it.month && it.month.slice(0,4) === String(clCurrentYear)).forEach(it=>{
+    (byMonth[it.month]=byMonth[it.month]||[]).push(it);
+  });
+  let html = '';
+  for(let m=1; m<=12; m++){
+    const key = `${clCurrentYear}-${String(m).padStart(2,'0')}`;
+    const list = (byMonth[key]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+    const pills = list.length
+      ? list.map(it=>`<span class="cl-month-pill ${it.done?'done':''}" data-id="${it.id}">${escapeHtml(it.text)}${it.done?` <span class="cl-item-meta">완료 ${escapeHtml(it.completedAt||'')}</span>`:''}<button class="cl-item-del" data-id="${it.id}">✕</button></span>`).join('')
+      : '<span style="color:var(--ink-soft); font-size:12.5px;">-</span>';
+    html += `<div class="cl-month-block"><div class="cl-month-head">${m}월</div><div class="cl-month-pills">${pills}</div></div>`;
+  }
+  wrap.innerHTML = html;
+}
+document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
+  const delBtn = e.target.closest('.cl-item-del');
+  if(delBtn){
+    if(!await customConfirm('이 루틴 항목을 삭제할까요?')) return;
+    try{ await MONTHLY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
+    return;
+  }
+  const pill = e.target.closest('.cl-month-pill');
+  if(!pill) return;
+  const item = allMonthlyChecklist.find(x=>x.id===pill.dataset.id);
+  if(!item) return;
+  const newDone = !item.done;
+  try{ await MONTHLY_CL.doc(item.id).update({ done:newDone, completedAt: newDone?todayStr():'' }); }
+  catch(err){ alert('업데이트 실패: ' + err.message); }
+});
+document.getElementById('clMonthlyAddBtn').onclick = async ()=>{
+  const month = document.getElementById('clMonthlyMonthInput').value;
+  const text = document.getElementById('clMonthlyTextInput').value.trim();
+  if(!month || !text){ alert('월과 내용을 입력해주세요.'); return; }
+  try{
+    await MONTHLY_CL.add({
+      ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+      month, text, done:false, completedAt:'', seq: Date.now()
+    });
+    document.getElementById('clMonthlyTextInput').value = '';
+    logAction('월별 루틴 추가', text);
+  }catch(err){ alert('추가 실패: ' + err.message); }
+};
+document.getElementById('clYearPrev').onclick = ()=>{ clCurrentYear--; renderMonthlyChecklistView(); };
+document.getElementById('clYearNext').onclick = ()=>{ clCurrentYear++; renderMonthlyChecklistView(); };
+
+/* ---- Template management ---- */
+function renderTemplateList(){
+  const wrap = document.getElementById('clTemplateList');
+  if(!wrap) return;
+  if(!checklistTemplates.length){ wrap.innerHTML = '<div class="acct-row">등록된 반복 항목이 없습니다.</div>'; return; }
+  const recurLabel = { monthly:'매달', quarterly:'분기별', semiannual:'반기', annual:'연말' };
+  wrap.innerHTML = checklistTemplates.map(t=>`
+    <div class="cl-tpl-row">
+      <div class="main">
+        ${t.category ? `<span class="tag">${escapeHtml(t.category)}</span>` : ''}${escapeHtml(t.text)}
+        <div style="font-size:11px; color:var(--ink-soft); margin-top:2px;">${recurLabel[t.recurrence]||t.recurrence} · ${t.day}일</div>
+      </div>
+      <button class="del-btn" data-id="${t.id}">삭제</button>
+    </div>`).join('');
+}
+document.getElementById('clTemplateList').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('.del-btn');
+  if(!btn) return;
+  if(!await customConfirm('이 반복 항목을 삭제할까요? (이미 생성된 일별 체크리스트는 남아있어요)')) return;
+  try{ await CL_TEMPLATES.doc(btn.dataset.id).delete(); }catch(err){ alert('삭제 실패: ' + err.message); }
+});
+let clTplRecurrenceVal = 'monthly';
+document.getElementById('clTplRecurrence').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  clTplRecurrenceVal = chip.dataset.v;
+  [...document.querySelectorAll('#clTplRecurrence .chip')].forEach(c=>c.classList.toggle('active', c===chip));
+});
+document.getElementById('clTplAddBtn').onclick = async ()=>{
+  const text = document.getElementById('clTplTextInput').value.trim();
+  const category = document.getElementById('clTplCategoryInput').value.trim();
+  const day = parseInt(document.getElementById('clTplDayInput').value, 10);
+  if(!text){ alert('내용을 입력해주세요.'); return; }
+  if(!day || day<1 || day>31){ alert('기준일을 1~31 사이로 입력해주세요.'); return; }
+  try{
+    await CL_TEMPLATES.add({ ownerUid: currentUser.uid, text, category, recurrence: clTplRecurrenceVal, day, lastMaterializedMonth: '' });
+    logAction('반복 체크리스트 추가', text);
+    document.getElementById('clTplTextInput').value = '';
+    document.getElementById('clTplCategoryInput').value = '';
+    document.getElementById('clTplDayInput').value = '';
+  }catch(err){ alert('추가 실패: ' + err.message); }
+};
+
 
 /* ============ Boot ============ */
 ensureBootstrapAdmin().finally(()=>{
