@@ -410,8 +410,11 @@
 <div id="tabWorklog">
   <div class="add-card">
     <div class="checkin-bar" id="checkinBar" style="display:none;">
-      <span>☀️ 오늘 첫 업무일지네요 — 리뷰현황·은행거래내역·메일 확인을 자동으로 추가할까요?</span>
-      <button id="checkinBtn">출근 · 반복업무 추가</button>
+      <span id="checkinBarText">☀️ 오늘 첫 업무일지네요 — 반복업무를 자동으로 추가할까요?</span>
+      <span style="display:flex; gap:6px; flex:none;">
+        <button id="checkinBtn">출근 · 반복업무 추가</button>
+        <button id="recurringManageBtn" style="background:transparent; color:var(--amber); border:1px solid var(--amber); font-weight:600;">관리</button>
+      </span>
     </div>
     <div class="date-nav">
       <button class="arrow" id="prevDay">‹</button>
@@ -420,6 +423,9 @@
         <input type="date" id="datePicker">
       </div>
       <button class="arrow" id="nextDay">›</button>
+    </div>
+    <div style="text-align:right; margin:-6px 0 12px;">
+      <span id="recurringManageLink" style="font-size:11.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer;">🔁 반복업무 관리</span>
     </div>
 
     <label class="field-label">구분</label>
@@ -535,6 +541,25 @@
   </div>
 </div>
 
+<!-- Recurring tasks manage modal -->
+<div class="overlay center-modal" id="recurringOverlay">
+  <div class="sheet">
+    <h3>반복업무 관리 <span class="x" id="recurringClose">닫기 ✕</span></h3>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">"출근 · 반복업무 추가"를 누르면 여기 등록된 목록이 오늘 날짜로 한 번에 추가돼요. 내용에 <code>{어제}</code>라고 적으면 어제 날짜(MM/DD)로 자동 치환됩니다.</p>
+    <div id="recurringList"></div>
+    <div class="add-acct-form">
+      <input type="text" id="recurCatInput" placeholder="구분 (예: 리뷰현황)">
+      <input type="text" id="recurContentInput" placeholder="내용 (예: ~{어제} 리뷰현황 확인)">
+      <div class="role-toggle" id="recurNoteRole">
+        <div class="chip active" data-v="완료">완료</div>
+        <div class="chip" data-v="진행중">진행중</div>
+        <div class="chip" data-v="대기중">대기중</div>
+      </div>
+      <button class="add-btn" id="recurAddBtn">반복업무 추가</button>
+    </div>
+  </div>
+</div>
+
 <!-- Report modal -->
 <div class="overlay" id="reportOverlay">
   <div class="sheet">
@@ -636,36 +661,63 @@ document.getElementById('nextDay').onclick = ()=>{ selectedDate = shiftDate(sele
 datePicker.onchange = ()=>{ selectedDate = datePicker.value; renderDateLabel(); };
 
 /* ============ Check-in (recurring daily tasks) ============ */
-const RECURRING_TASKS = ['리뷰현황','은행거래내역','메일'];
+const RECURRING = db.collection('workLogApp_recurring_tasks');
+const DEFAULT_RECURRING = [
+  { category:'리뷰현황', content:'~{어제} 리뷰현황 확인', note:'완료' },
+  { category:'은행거래내역', content:'~{어제}', note:'완료' },
+  { category:'메일', content:'네이버, 다음계정 메일 확인', note:'완료' }
+];
+let recurringTasks = [];
+let unsubRecurring = null;
+function startRecurringSync(){
+  if(unsubRecurring || !currentUser) return;
+  const ref = RECURRING.doc(currentUser.uid);
+  unsubRecurring = ref.onSnapshot(doc=>{
+    if(doc.exists && Array.isArray(doc.data().tasks)){
+      recurringTasks = doc.data().tasks;
+    } else {
+      recurringTasks = DEFAULT_RECURRING.slice();
+      ref.set({ tasks: recurringTasks }, {merge:true}).catch(()=>{});
+    }
+    renderRecurringList();
+    updateCheckinBar();
+  }, ()=>{});
+}
+function saveRecurringTasks(){
+  if(!currentUser) return Promise.resolve();
+  return RECURRING.doc(currentUser.uid).set({ tasks: recurringTasks }, {merge:true});
+}
+function fillYesterday(text, forDate){
+  const y = shiftDate(forDate, -1);
+  const {month: ym, day: yd} = fmtLabel(y);
+  const mmdd = `${String(ym).padStart(2,'0')}/${String(yd).padStart(2,'0')}`;
+  return text.split('{어제}').join(mmdd);
+}
+
 function updateCheckinBar(){
   const bar = document.getElementById('checkinBar');
   if(!bar) return;
   if(!currentUser){ bar.style.display = 'none'; return; }
   if(selectedDate !== todayStr()){ bar.style.display = 'none'; return; }
+  if(!recurringTasks.length){ bar.style.display = 'none'; return; }
   const todays = allEntries.filter(e=>e.date===selectedDate && e.ownerUid===currentUser.uid);
-  const hasAll = RECURRING_TASKS.every(cat => todays.some(e=>e.category===cat));
+  const hasAll = recurringTasks.every(t => todays.some(e=>e.category===t.category));
   bar.style.display = hasAll ? 'none' : 'flex';
 }
+
 document.getElementById('checkinBtn').onclick = async ()=>{
   const btn = document.getElementById('checkinBtn');
+  if(!recurringTasks.length){ alert('등록된 반복업무가 없습니다. "관리"에서 먼저 추가해주세요.'); return; }
   btn.disabled = true; btn.textContent = '추가 중…';
   try{
-    const yesterday = shiftDate(selectedDate, -1);
-    const {month: ym, day: yd} = fmtLabel(yesterday);
-    const mmdd = `${String(ym).padStart(2,'0')}/${String(yd).padStart(2,'0')}`;
     const base = Date.now();
-    const items = [
-      { category:'리뷰현황', content:`~${mmdd} 리뷰현황 확인`, note:'완료' },
-      { category:'은행거래내역', content:`~${mmdd}`, note:'완료' },
-      { category:'메일', content:'네이버, 다음계정 메일 확인', note:'완료' }
-    ];
     const batch = db.batch();
-    items.forEach((it, idx)=>{
+    recurringTasks.forEach((it, idx)=>{
       const ref = ENTRIES.doc();
       batch.set(ref, {
         date: selectedDate,
         category: it.category,
-        content: it.content,
+        content: fillYesterday(it.content, selectedDate),
         note: it.note,
         ownerUid: currentUser.uid,
         ownerName: currentUser.id,
@@ -677,10 +729,58 @@ document.getElementById('checkinBtn').onclick = async ()=>{
     logAction('출근 반복업무 추가', selectedDate);
   }catch(err){
     alert('추가에 실패했습니다: ' + err.message);
+    console.error(err);
   }finally{
     btn.disabled = false; btn.textContent = '출근 · 반복업무 추가';
   }
 };
+
+/* ============ Recurring tasks manage modal ============ */
+function renderRecurringList(){
+  const wrap = document.getElementById('recurringList');
+  if(!wrap) return;
+  if(!recurringTasks.length){ wrap.innerHTML = '<div class="acct-row">등록된 반복업무가 없습니다.</div>'; return; }
+  wrap.innerHTML = recurringTasks.map((t, idx)=>`
+    <div class="acct-row" style="align-items:flex-start;">
+      <span class="id" style="flex:none; width:76px;">${escapeHtml(t.category)}</span>
+      <span style="flex:1; font-size:12.5px; color:var(--ink-soft);">${escapeHtml(t.content)} <span class="role-tag">${escapeHtml(t.note||'')}</span></span>
+      <button class="del-btn" data-idx="${idx}">삭제</button>
+    </div>`).join('');
+}
+document.getElementById('recurringList').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.del-btn');
+  if(!btn) return;
+  const idx = parseInt(btn.dataset.idx, 10);
+  recurringTasks = recurringTasks.filter((_, i)=>i!==idx);
+  saveRecurringTasks();
+  logAction('반복업무 삭제');
+});
+let recurNoteVal = '완료';
+document.getElementById('recurNoteRole').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  recurNoteVal = chip.dataset.v;
+  [...document.querySelectorAll('#recurNoteRole .chip')].forEach(c=>c.classList.toggle('active', c===chip));
+});
+document.getElementById('recurAddBtn').onclick = ()=>{
+  const cat = document.getElementById('recurCatInput').value.trim();
+  const content = document.getElementById('recurContentInput').value.trim();
+  if(!cat || !content){ alert('구분과 내용을 입력해주세요.'); return; }
+  recurringTasks = [...recurringTasks, { category: cat, content, note: recurNoteVal }];
+  saveRecurringTasks();
+  logAction('반복업무 추가', cat);
+  document.getElementById('recurCatInput').value = '';
+  document.getElementById('recurContentInput').value = '';
+};
+function openRecurringModal(){
+  renderRecurringList();
+  document.getElementById('recurringOverlay').classList.add('open');
+}
+document.getElementById('recurringManageBtn').onclick = openRecurringModal;
+document.getElementById('recurringManageLink').onclick = openRecurringModal;
+document.getElementById('recurringClose').onclick = ()=>{ document.getElementById('recurringOverlay').classList.remove('open'); };
+document.getElementById('recurringOverlay').addEventListener('click', (e)=>{ if(e.target.id==='recurringOverlay') e.currentTarget.classList.remove('open'); });
+
 renderDateLabel();
 
 /* ============ Categories ============ */
@@ -1558,6 +1658,7 @@ function enterApp(){
   startMetaSync();
   startProfilesSync();
   startLogsSync();
+  startRecurringSync();
   pingSync();
   if(pendingLoginLog){ pendingLoginLog = false; logAction('로그인'); }
   // 로그인 화면이 떠 있는 동안 숨겨진 상태로 폭 계산이 잘못될 수 있어, 화면이 실제로 보이는 시점에 다시 계산
