@@ -413,9 +413,14 @@
   .todo-actions button:hover{ background:var(--rule); color:var(--ink); }
   .todo-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:24px 0; }
 
+  .cl-hint{ font-size:12.5px; color:var(--ink-soft); margin:0 0 4px; }
+  .cl-add-hint{ font-size:11.5px; font-weight:600; color:var(--seal); flex:none; }
   .cl-day-block{ margin-bottom:14px; padding:10px 12px; border:1px solid var(--rule); border-radius:10px; background:#fff; }
   .cl-day-block.today{ border-color:var(--seal); box-shadow:0 0 0 1px var(--seal) inset; }
-  .cl-day-head{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:15px; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--rule-strong); }
+  .cl-day-block.open{ border-color:var(--seal); }
+  .cl-day-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:15px; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--rule-strong); cursor:pointer; }
+  .cl-day-head:hover{ color:var(--seal); }
+  .cl-day-title{ min-width:0; }
   .cl-today-tag{ display:inline-block; font-size:11px; font-weight:700; color:#fff; background:var(--seal); border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
   .cl-day-add{ padding-top:8px; }
   .cl-day-add-input{ width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--rule); border-radius:8px; background:#FBFAF6; color:var(--ink); }
@@ -428,8 +433,14 @@
   .cl-item-meta{ font-size:11px; color:var(--ink-soft); flex:none; }
   .cl-item-del{ flex:none; font-size:11px; color:var(--seal); background:none; border:none; cursor:pointer; font-family:inherit; }
 
-  .cl-month-block{ margin-bottom:14px; }
-  .cl-month-head{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:14px; margin-bottom:6px; }
+  .cl-month-block{ margin-bottom:14px; padding:8px 12px; border:1px solid var(--rule); border-radius:10px; background:#fff; }
+  .cl-month-block.open{ border-color:var(--seal); }
+  .cl-month-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:14px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--rule-strong); cursor:pointer; }
+  .cl-month-head:hover{ color:var(--seal); }
+  .cl-month-add{ padding-top:8px; }
+  .cl-month-add-input{ width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--rule); border-radius:8px; background:#FBFAF6; color:var(--ink); }
+  .cl-month-add-input:focus{ outline:none; border-color:var(--seal); background:#fff; }
+  .cl-month-add-input::placeholder{ color:var(--ink-soft); }
   .cl-month-pills{ display:flex; flex-wrap:wrap; gap:6px; }
   .cl-month-pill{
     font-size:11.5px; padding:5px 10px; border-radius:999px; background:var(--seal-soft); color:var(--seal);
@@ -477,8 +488,17 @@
     display:flex; align-items:center; justify-content:center;
   }
   .dash-day-cell{ min-height:25px; background:#fff; padding:2px 5px; display:flex; flex-direction:column; gap:3px; }
+  .dash-day-cell[data-date]{ cursor:pointer; }
   .dash-empty{ background:#FAF9F6; }
   .dash-day-cell.dragover{ outline:2px dashed var(--seal); outline-offset:-2px; }
+  /* 날짜 칸 클릭 시 뜨는 "일정 추가" 창 */
+  .dash-modal-overlay{ position:fixed; inset:0; background:rgba(31,35,40,.45); display:none; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .dash-modal-overlay.show{ display:flex; }
+  .dash-modal-card{ background:#fff; border-radius:14px; padding:16px 18px 20px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.35); }
+  .dash-modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .dash-modal-head .serif{ font-size:16px; font-weight:700; }
+  .dash-modal-close{ background:none; border:none; font-size:16px; color:var(--ink-soft); cursor:pointer; padding:4px 8px; line-height:1; }
+  .dash-modal-close:hover{ color:var(--ink); }
   /* 10일마다 굵은 가로줄 (10·20·30일 아래) */
   .dash-row-mark{ box-shadow: inset 0 -2px 0 0 var(--ink); }
   .dash-pill{ font-size:11px; padding:3px 7px; border-radius:7px; background:var(--seal-soft); color:var(--seal); cursor:grab; white-space:normal; word-break:break-word; line-height:1.35; font-weight:500; touch-action:none; -webkit-user-select:none; user-select:none; }
@@ -691,7 +711,7 @@
 <div id="tabChecklist" style="display:none;">
   <div class="checklist-subnav" id="checklistSubnav">
     <button class="cl-subnav-btn active" data-view="calendar">달력</button>
-    <button class="cl-subnav-btn" data-view="daily">일별목록</button>
+    <button class="cl-subnav-btn" data-view="daily">일별루틴</button>
     <button class="cl-subnav-btn" data-view="monthly">월별루틴</button>
     <button class="cl-subnav-btn" data-view="todo">할일</button>
     <!-- 반복설정 탭 제거: 이제 '일별'에 넣으면 매달 그 날짜에, '월별'에 넣으면 매달 자동 반복됨.
@@ -709,14 +729,8 @@
   </div>
 
   <div id="clView-daily" class="cl-view" style="display:none;">
-    <div class="add-card">
-      <label class="field-label">날짜 (매달 이 날짜에 자동 반복돼요)</label>
-      <div class="field"><input type="date" id="clDailyDateInput"></div>
-      <label class="field-label">내용</label>
-      <div class="field"><input type="text" id="clDailyTextInput" placeholder="예: 매출 정산"></div>
-      <button class="add-btn" id="clDailyAddBtn">+ 일별 반복 추가</button>
-    </div>
-    <div class="month-select-wrap" style="margin:14px 0 10px;">
+    <p class="cl-hint">날짜를 누르면 그 날짜에 할 일을 적을 수 있어요.</p>
+    <div class="month-select-wrap" style="margin:8px 0 10px;">
       <button class="arrow" id="clDailyPrev">‹</button>
       <span id="clDailyLabel" class="serif" style="font-size:16px; font-weight:700; margin:0 10px;"></span>
       <button class="arrow" id="clDailyNext">›</button>
@@ -725,14 +739,8 @@
   </div>
 
   <div id="clView-monthly" class="cl-view" style="display:none;">
-    <div class="add-card">
-      <label class="field-label">월 (이 달부터 매달 자동 반복돼요)</label>
-      <div class="field"><input type="month" id="clMonthlyMonthInput"></div>
-      <label class="field-label">내용</label>
-      <div class="field"><input type="text" id="clMonthlyTextInput" placeholder="예: 월 매출 마감"></div>
-      <button class="add-btn" id="clMonthlyAddBtn">+ 월별 반복 추가</button>
-    </div>
-    <div class="month-select-wrap" style="margin:14px 0 10px;">
+    <p class="cl-hint">월을 누르면 그 달부터 매달 반복할 루틴을 적을 수 있어요.</p>
+    <div class="month-select-wrap" style="margin:8px 0 10px;">
       <button class="arrow" id="clYearPrev">‹</button>
       <span id="clYearLabel" class="serif" style="font-size:16px; font-weight:700; margin:0 10px;"></span>
       <button class="arrow" id="clYearNext">›</button>
@@ -786,21 +794,29 @@
     </div>
     <div class="report-btn" id="dashExportBtn">📊 엑셀로 내보내기</div>
   </div>
-  <div class="add-card">
-    <label class="field-label">시작일</label>
-    <div class="field"><input type="date" id="dashDateInput"></div>
-    <label class="field-label">종료일 (선택 — 여러 날 이어지는 일정이면 입력)</label>
-    <div class="field"><input type="date" id="dashEndDateInput"></div>
-    <div id="dashSpanHint" style="font-size:11.5px; color:var(--seal); margin:-4px 2px 10px; display:none;"></div>
-    <label class="field-label">구분 (선택)</label>
-    <div class="field"><input type="text" id="dashCategoryInput" placeholder="예: 인사동, 북촌, 추석"></div>
-    <label class="field-label">내용</label>
-    <div class="field"><input type="text" id="dashTextInput" placeholder="예: 봄스페셜 시연"></div>
-    <button class="add-btn" id="dashAddBtn">+ 대시보드에 추가</button>
-  </div>
-  <p style="font-size:11.5px; color:var(--ink-soft); margin:12px 0 8px;">여러 날 일정은 종료일까지 색 막대로 이어져 보여요. 드래그하면 <b>같은 일수(기간)를 유지한 채</b> 통째로 옮겨져요. 항목을 클릭하면 삭제할 수 있어요.</p>
+  <p style="font-size:11.5px; color:var(--ink-soft); margin:12px 0 8px;"><b>빈 칸을 클릭하면</b> 그 날짜로 일정을 추가하는 창이 열려요. 여러 날 일정은 종료일까지 색 막대로 이어져 보이고, 드래그하면 <b>같은 일수(기간)를 유지한 채</b> 통째로 옮겨져요. 일정을 클릭하면 삭제할 수 있어요.</p>
   <div class="dash-grid-scroll">
     <div class="dash-grid" id="dashGrid"></div>
+  </div>
+
+  <!-- 날짜 칸을 클릭하면 가운데에 뜨는 "일정 추가" 창 -->
+  <div class="dash-modal-overlay" id="dashAddModal">
+    <div class="dash-modal-card">
+      <div class="dash-modal-head">
+        <span id="dashModalTitle" class="serif">일정 추가</span>
+        <button class="dash-modal-close" id="dashModalClose" aria-label="닫기">✕</button>
+      </div>
+      <label class="field-label">시작일</label>
+      <div class="field"><input type="date" id="dashDateInput"></div>
+      <label class="field-label">종료일 (선택 — 여러 날 이어지는 일정이면 입력)</label>
+      <div class="field"><input type="date" id="dashEndDateInput"></div>
+      <div id="dashSpanHint" style="font-size:11.5px; color:var(--seal); margin:-4px 2px 10px; display:none;"></div>
+      <label class="field-label">구분 (선택)</label>
+      <div class="field"><input type="text" id="dashCategoryInput" placeholder="예: 인사동, 북촌, 추석"></div>
+      <label class="field-label">내용</label>
+      <div class="field"><input type="text" id="dashTextInput" placeholder="예: 봄스페셜 시연"></div>
+      <button class="add-btn" id="dashAddBtn">+ 대시보드에 추가</button>
+    </div>
   </div>
 </div>
 
@@ -2865,12 +2881,12 @@ document.getElementById('clCalNext').onclick = ()=>{ clCurrentMonth = shiftMonth
 
 /* ---- Daily list view ---- */
 let clDailyFocusDate = null;   // 항목 추가 후 다시 포커스를 줄 날짜(재렌더 대비)
+let clDailyOpen = new Set();    // 입력칸이 열려 있는 날짜들
 function renderDailyChecklistView(){
   const wrap = document.getElementById('clDailyList');
   if(!wrap || !currentUser) return;
   const [yyyy, mm] = clCurrentMonth.split('-').map(Number);
   document.getElementById('clDailyLabel').textContent = `${yyyy}년 ${mm}월`;
-  if(!document.getElementById('clDailyDateInput').value) document.getElementById('clDailyDateInput').value = todayStr();
   const daysInMonth = new Date(yyyy, mm, 0).getDate();
   const todayS = todayStr();
   const byDay = {};
@@ -2883,16 +2899,17 @@ function renderDailyChecklistView(){
     const dateStr = `${clCurrentMonth}-${String(d).padStart(2,'0')}`;
     const wd = WEEKDAYS[new Date(yyyy, mm-1, d).getDay()];
     const isToday = dateStr === todayS;
+    const open = clDailyOpen.has(dateStr);
     const rows = (byDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(it=>`
       <div class="cl-item-row ${it.done?'done':''}" data-id="${it.id}">
         <span class="cl-item-text">${escapeHtml(it.text)}</span>
         ${it.done ? `<span class="cl-item-meta">완료 ${escapeHtml(it.completedAt||'')}</span>` : ''}
         <button class="cl-item-del" data-id="${it.id}">삭제</button>
       </div>`).join('');
-    html += `<div class="cl-day-block${isToday?' today':''}">
-      <div class="cl-day-head">${d}일 ${wd}요일${isToday?' <span class="cl-today-tag">오늘</span>':''}</div>
+    html += `<div class="cl-day-block${isToday?' today':''}${open?' open':''}" data-date="${dateStr}">
+      <div class="cl-day-head"><span class="cl-day-title">${d}일 ${wd}요일${isToday?' <span class="cl-today-tag">오늘</span>':''}</span><span class="cl-add-hint">${open?'닫기':'+ 추가'}</span></div>
       ${rows}
-      <div class="cl-day-add"><input type="text" class="cl-day-add-input" data-date="${dateStr}" placeholder="+ 할 일을 입력하고 Enter"></div>
+      <div class="cl-day-add" style="display:${open?'block':'none'}"><input type="text" class="cl-day-add-input" data-date="${dateStr}" placeholder="+ 할 일을 입력하고 Enter"></div>
     </div>`;
   }
   wrap.innerHTML = html;
@@ -2937,6 +2954,17 @@ document.getElementById('clDailyList').addEventListener('click', async (e)=>{
     try{ await DAILY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
     return;
   }
+  // 날짜(머리글) 클릭 → 그 날짜의 입력칸 열기/닫기
+  const head = e.target.closest('.cl-day-head');
+  if(head){
+    const block = head.closest('.cl-day-block');
+    const date = block && block.dataset.date;
+    if(!date) return;
+    if(clDailyOpen.has(date)) clDailyOpen.delete(date);
+    else { clDailyOpen.add(date); clDailyFocusDate = date; }
+    renderDailyChecklistView();
+    return;
+  }
   const row = e.target.closest('.cl-item-row');
   if(row) toggleDailyItemDone(row.dataset.id);
 });
@@ -2954,44 +2982,16 @@ document.getElementById('clDailyList').addEventListener('keydown', async (e)=>{
   catch(err){ alert('추가 실패: '+err.message); clDailyFocusDate=null; }
   inp.disabled = false;
 });
-document.getElementById('clDailyAddBtn').onclick = async ()=>{
-  const date = document.getElementById('clDailyDateInput').value;
-  const text = document.getElementById('clDailyTextInput').value.trim();
-  if(!date || !text){ alert('날짜와 내용을 입력해주세요.'); return; }
-  const dayNum = parseInt(date.slice(8,10), 10);
-  const ym = clCurrentMonth; // 지금 보고 있는 달에 즉시 표시
-  try{
-    // 일별에 넣으면 = 매달 이 날짜에 자동 반복 (반복 엔진의 monthly 템플릿으로 저장)
-    const ref = await CL_TEMPLATES.add({ ownerUid: currentUser.uid, text, category:'', recurrence:'monthly', day: dayNum, lastMaterializedMonth:'' });
-    const yyyy = parseInt(ym.slice(0,4),10), mm = parseInt(ym.slice(5,7),10);
-    const dim = new Date(yyyy, mm, 0).getDate();
-    const d = Math.min(Math.max(dayNum,1), dim);
-    await DAILY_CL.doc('tpl_' + ref.id + '_' + ym).set({
-      ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-      date: `${ym}-${String(d).padStart(2,'0')}`, text, category:'',
-      done:false, completedAt:'', templateId: ref.id, seq: Date.now()
-    });
-    await CL_TEMPLATES.doc(ref.id).update({ lastMaterializedMonth: ym });
-    document.getElementById('clDailyTextInput').value = '';
-    logAction('일별 반복 추가', text);
-  }catch(err){ alert('추가 실패: ' + err.message); }
-};
-// 날짜/월 칸 클릭 시 달력 바로 열기
-['clDailyDateInput','clMonthlyMonthInput'].forEach(id=>{
-  const el = document.getElementById(id);
-  if(el) el.addEventListener('click', ()=>{ try{ el.showPicker(); }catch(e){} });
-});
 document.getElementById('clDailyPrev').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,-1); materializeTemplatesForMonth(clCurrentMonth); renderDailyChecklistView(); };
 document.getElementById('clDailyNext').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,1); materializeTemplatesForMonth(clCurrentMonth); renderDailyChecklistView(); };
 
 /* ---- Monthly routine view ---- */
+let clMonthlyFocusMonth = null;   // 항목 추가 후 다시 포커스를 줄 월(재렌더 대비)
+let clMonthlyOpen = new Set();     // 입력칸이 열려 있는 월들
 function renderMonthlyChecklistView(){
   const wrap = document.getElementById('clMonthlyList');
   if(!wrap || !currentUser) return;
   document.getElementById('clYearLabel').textContent = `${clCurrentYear}년 루틴`;
-  if(!document.getElementById('clMonthlyMonthInput').value){
-    document.getElementById('clMonthlyMonthInput').value = todayStr().slice(0,7);
-  }
   // 매달 반복(everyMonth) 항목 + 예전 단월(legacy) 항목 분리
   const legacyByMonth = {};
   const recurringItems = [];
@@ -3011,9 +3011,26 @@ function renderMonthlyChecklistView(){
           return `<span class="cl-month-pill ${done?'done':''}" data-id="${it.id}" data-month="${key}">${escapeHtml(it.text)}${done?` <span class="cl-item-meta">완료</span>`:''}<button class="cl-item-del" data-id="${it.id}">✕</button></span>`;
         }).join('')
       : '<span style="color:var(--ink-soft); font-size:12.5px;">-</span>';
-    html += `<div class="cl-month-block"><div class="cl-month-head">${m}월</div><div class="cl-month-pills">${pills}</div></div>`;
+    const open = clMonthlyOpen.has(key);
+    html += `<div class="cl-month-block${open?' open':''}" data-month="${key}">
+      <div class="cl-month-head"><span>${m}월</span><span class="cl-add-hint">${open?'닫기':'+ 추가'}</span></div>
+      <div class="cl-month-pills">${pills}</div>
+      <div class="cl-month-add" style="display:${open?'block':'none'}"><input type="text" class="cl-month-add-input" data-month="${key}" placeholder="+ 매달 반복할 루틴 입력 후 Enter"></div>
+    </div>`;
   }
   wrap.innerHTML = html;
+  if(clMonthlyFocusMonth){
+    const inp = wrap.querySelector('.cl-month-add-input[data-month="'+clMonthlyFocusMonth+'"]');
+    if(inp){ inp.focus(); }
+    clMonthlyFocusMonth = null;
+  }
+}
+async function addMonthlyRoutine(startMonth, text){
+  await MONTHLY_CL.add({
+    ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+    text, startMonth, everyMonth: true, doneMonths: {}, seq: Date.now()
+  });
+  logAction('월별 반복 추가', text);
 }
 document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.cl-item-del');
@@ -3022,6 +3039,17 @@ document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
     const msg = (it && it.everyMonth) ? '이 반복 항목을 삭제할까요? 모든 달에서 사라져요.' : '이 루틴 항목을 삭제할까요?';
     if(!await customConfirm(msg)) return;
     try{ await MONTHLY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
+    return;
+  }
+  // 월(머리글) 클릭 → 그 달의 입력칸 열기/닫기
+  const mhead = e.target.closest('.cl-month-head');
+  if(mhead){
+    const block = mhead.closest('.cl-month-block');
+    const key = block && block.dataset.month;
+    if(!key) return;
+    if(clMonthlyOpen.has(key)) clMonthlyOpen.delete(key);
+    else { clMonthlyOpen.add(key); clMonthlyFocusMonth = key; }
+    renderMonthlyChecklistView();
     return;
   }
   const pill = e.target.closest('.cl-month-pill');
@@ -3041,20 +3069,20 @@ document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
     catch(err){ alert('업데이트 실패: ' + err.message); }
   }
 });
-document.getElementById('clMonthlyAddBtn').onclick = async ()=>{
-  const month = document.getElementById('clMonthlyMonthInput').value;
-  const text = document.getElementById('clMonthlyTextInput').value.trim();
-  if(!month || !text){ alert('월과 내용을 입력해주세요.'); return; }
-  try{
-    // 월별에 넣으면 = 이 달부터 매달 자동 반복. 완료는 달마다 따로(doneMonths).
-    await MONTHLY_CL.add({
-      ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-      text, startMonth: month, everyMonth: true, doneMonths: {}, seq: Date.now()
-    });
-    document.getElementById('clMonthlyTextInput').value = '';
-    logAction('월별 반복 추가', text);
-  }catch(err){ alert('추가 실패: ' + err.message); }
-};
+// 월별 입력칸: Enter로 그 달부터 매달 반복 루틴 추가
+document.getElementById('clMonthlyList').addEventListener('keydown', async (e)=>{
+  const inp = e.target.closest('.cl-month-add-input');
+  if(!inp || e.key !== 'Enter') return;
+  e.preventDefault();
+  const text = inp.value.trim();
+  const month = inp.dataset.month;
+  if(!text || !month) return;
+  inp.disabled = true;
+  clMonthlyFocusMonth = month;   // 재렌더 후 같은 칸에 다시 포커스
+  try{ await addMonthlyRoutine(month, text); inp.value=''; }
+  catch(err){ alert('추가 실패: '+err.message); clMonthlyFocusMonth=null; }
+  inp.disabled = false;
+});
 document.getElementById('clYearPrev').onclick = ()=>{ clCurrentYear--; renderMonthlyChecklistView(); };
 document.getElementById('clYearNext').onclick = ()=>{ clCurrentYear++; renderMonthlyChecklistView(); };
 
@@ -3289,6 +3317,26 @@ document.getElementById('dashEndDateInput').addEventListener('change', dashUpdat
   if(el) el.addEventListener('click', ()=>{ try{ el.showPicker(); }catch(e){} });
 });
 
+// 날짜 칸 클릭 → 가운데 "일정 추가" 창 열기 (클릭한 날짜를 시작일로 채움)
+function openDashAddModal(date){
+  document.getElementById('dashDateInput').value = date || '';
+  document.getElementById('dashEndDateInput').value = '';
+  document.getElementById('dashCategoryInput').value = '';
+  document.getElementById('dashTextInput').value = '';
+  dashUpdateSpanHint();
+  const title = document.getElementById('dashModalTitle');
+  if(title){
+    if(date){ const f = fmtLabel(date); title.textContent = `${f.year}년 ${f.month}월 ${f.day}일 일정 추가`; }
+    else { title.textContent = '일정 추가'; }
+  }
+  document.getElementById('dashAddModal').classList.add('show');
+  setTimeout(()=>{ const t=document.getElementById('dashTextInput'); if(t) t.focus(); }, 30);
+}
+function closeDashAddModal(){ document.getElementById('dashAddModal').classList.remove('show'); }
+document.getElementById('dashModalClose').onclick = closeDashAddModal;
+document.getElementById('dashAddModal').addEventListener('click', (e)=>{ if(e.target.id === 'dashAddModal') closeDashAddModal(); });
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeDashAddModal(); });
+
 document.getElementById('dashAddBtn').onclick = async ()=>{
   const date = document.getElementById('dashDateInput').value;
   let endDate = document.getElementById('dashEndDateInput').value || date;
@@ -3306,6 +3354,7 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
     document.getElementById('dashTextInput').value = '';
     dashUpdateSpanHint();
     logAction('대시보드 일정 추가', text);
+    closeDashAddModal();
   }catch(err){ alert('추가 실패: ' + err.message); }
 };
 
@@ -3316,6 +3365,14 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
   const gridEl = document.getElementById('dashGrid');
   if(!gridEl) return;
   let p = null;
+  let justDragged = false;   // 드래그 직후 발생하는 click으로 창이 열리는 것 방지
+  // 빈 날짜 칸 클릭 → 그 날짜로 "일정 추가" 창 열기 (알약(일정) 클릭은 삭제 로직이 처리)
+  gridEl.addEventListener('click', (e)=>{
+    if(justDragged){ justDragged = false; return; }
+    if(e.target.closest('.dash-pill')) return;
+    const cell = e.target.closest('.dash-day-cell[data-date]');
+    if(cell) openDashAddModal(cell.dataset.date);
+  });
   function clearDragover(except){
     document.querySelectorAll('.dash-day-cell.dragover').forEach(c=>{ if(c!==except) c.classList.remove('dragover'); });
   }
@@ -3349,6 +3406,7 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
     document.body.style.userSelect = '';
     clearDragover(null);
     if(d.pill) d.pill.classList.remove('dragging');
+    if(d.moved) justDragged = true;
     if(!d.moved){
       // 클릭 = 삭제
       if(!await customConfirm('이 일정을 삭제할까요?')) return;
