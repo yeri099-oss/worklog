@@ -391,6 +391,25 @@
   }
   .cl-pill.done{ background:var(--rule); color:var(--ink-soft); text-decoration:line-through; opacity:.75; }
   .cl-pill.dragging{ opacity:.3; }
+  .cl-pill.todo{ background:#FDECEA; color:#C0392B; }
+  .cl-pill.todo.done{ background:var(--rule); color:var(--ink-soft); text-decoration:line-through; }
+
+  /* ===== 할일(To-do) ===== */
+  .todo-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:#fff; border:1px solid var(--rule); border-radius:10px; margin-bottom:7px; }
+  .todo-check{ width:22px; height:22px; border-radius:50%; border:1.5px solid var(--rule-strong); flex-shrink:0; cursor:pointer; background:#fff; }
+  .todo-check:hover{ border-color:var(--seal); background:var(--seal-soft); }
+  .todo-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .todo-dot.none{ background:#4CAF7D; }
+  .todo-dot.deadline{ background:#E05353; }
+  .todo-main{ flex:1; min-width:0; }
+  .todo-text{ font-size:14px; color:var(--ink); word-break:break-word; line-height:1.4; }
+  .todo-badge{ display:inline-block; margin-top:3px; font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--rule-strong); color:var(--ink-soft); }
+  .todo-badge.deadline{ color:#C0392B; border-color:#E0A9A0; }
+  .todo-badge.overdue{ background:#FDECEA; color:#C0392B; border-color:#E0A9A0; font-weight:600; }
+  .todo-actions{ display:flex; gap:2px; flex-shrink:0; }
+  .todo-actions button{ width:28px; height:28px; border:none; background:none; cursor:pointer; color:var(--ink-soft); border-radius:6px; font-size:13px; font-family:inherit; }
+  .todo-actions button:hover{ background:var(--rule); color:var(--ink); }
+  .todo-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:24px 0; }
 
   .cl-day-block{ margin-bottom:16px; }
   .cl-day-head{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:15px; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--rule-strong); }
@@ -664,6 +683,7 @@
     <button class="cl-subnav-btn active" data-view="calendar">달력</button>
     <button class="cl-subnav-btn" data-view="daily">일별목록</button>
     <button class="cl-subnav-btn" data-view="monthly">월별루틴</button>
+    <button class="cl-subnav-btn" data-view="todo">할일</button>
     <button class="cl-subnav-btn" data-view="templates">반복설정</button>
   </div>
 
@@ -727,6 +747,21 @@
       <button class="add-btn" id="clTplAddBtn">+ 반복 항목 추가</button>
     </div>
     <div id="clTemplateList"></div>
+  </div>
+
+  <div id="clView-todo" class="cl-view" style="display:none;">
+    <div class="add-card">
+      <label class="field-label">할일</label>
+      <div class="field"><input type="text" id="todoTextInput" placeholder="할일을 입력해주세요" maxlength="80"></div>
+      <div class="role-toggle" id="todoDeadlineToggle" style="margin-bottom:10px;">
+        <div class="chip active" data-v="none">무기한</div>
+        <div class="chip" data-v="deadline">마감</div>
+      </div>
+      <div class="field" id="todoDeadlineField" style="display:none;"><input type="date" id="todoDeadlineInput"></div>
+      <button class="add-btn" id="todoAddBtn">+ 할일 추가</button>
+    </div>
+    <p style="font-size:11.5px; color:var(--ink-soft); margin:12px 0 8px;">완료하면 목록에서 사라져요. 마감이 있는 할일은 달력의 마감일에 표시되고, 완료하면 그걸로 끝(다음 달로 넘어가지 않아요).</p>
+    <div id="todoList"></div>
   </div>
 </div>
 
@@ -924,6 +959,7 @@ const DAILY_CL = db.collection('workLogApp_daily_checklist');
 const MONTHLY_CL = db.collection('workLogApp_monthly_checklist');
 const CL_TEMPLATES = db.collection('workLogApp_checklist_templates');
 const DASHBOARD = db.collection('workLogApp_dashboard_events');
+const TODOS = db.collection('workLogApp_todos'); // 할일(단발성 to-do)
 const LOGIN = db.collection('workLogApp_login'); // 로그인용 아이디→이메일 조회(공개). 프로필 본체는 비공개로 잠금
 const PSEUDO_DOMAIN = '@worklog-app.local';
 function toPseudoEmail(username){ return username.toLowerCase() + PSEUDO_DOMAIN; }
@@ -2059,6 +2095,7 @@ function teardownSubscriptions(){
   if(unsubMonthlyCL){ unsubMonthlyCL(); unsubMonthlyCL = null; }
   if(unsubTemplates){ unsubTemplates(); unsubTemplates = null; }
   if(unsubDashboard){ unsubDashboard(); unsubDashboard = null; }
+  if(unsubTodos){ unsubTodos(); unsubTodos = null; }
   allEntries = [];
   recurringTasks = [];
   carryOverCheckedFor = null;
@@ -2068,6 +2105,7 @@ function teardownSubscriptions(){
   materializedMonths = new Set();
   seedAttempted = false;
   allDashboardEvents = [];
+  allTodos = [];
 }
 
 let signupInProgress = false;
@@ -2120,6 +2158,7 @@ function enterApp(){
   startDailyChecklistSync();
   startMonthlyChecklistSync();
   startTemplatesSync();
+  startTodosSync();
   startDashboardSync();
   pingSync();
   if(pendingLoginLog){ pendingLoginLog = false; logAction('로그인'); }
@@ -2487,6 +2526,9 @@ let unsubMonthlyCL = null;
 let unsubTemplates = null;
 let materializedMonths = new Set();
 let seedAttempted = false;
+let allTodos = [];
+let unsubTodos = null;
+let todoDeadlineMode = 'none';
 
 function shiftMonth(yearMonth, delta){
   let [y,m] = yearMonth.split('-').map(Number);
@@ -2504,13 +2546,14 @@ document.getElementById('checklistSubnav').addEventListener('click', (e)=>{
   if(!btn) return;
   const view = btn.dataset.view;
   [...document.querySelectorAll('.cl-subnav-btn')].forEach(b=>b.classList.toggle('active', b===btn));
-  ['calendar','daily','monthly','templates'].forEach(v=>{
+  ['calendar','daily','monthly','templates','todo'].forEach(v=>{
     document.getElementById('clView-'+v).style.display = (v===view) ? '' : 'none';
   });
   if(view==='calendar') renderChecklistCalendar();
   if(view==='daily') renderDailyChecklistView();
   if(view==='monthly') renderMonthlyChecklistView();
   if(view==='templates') renderTemplateList();
+  if(view==='todo') renderTodoList();
 });
 
 /* ---- Sync ---- */
@@ -2537,6 +2580,96 @@ function startTemplatesSync(){
     renderTemplateList();
   }, err=>{ console.error('반복 체크리스트 로드 실패', err); });
 }
+
+/* ---- 할일(To-do) ---- */
+function startTodosSync(){
+  if(unsubTodos || !currentUser) return;
+  unsubTodos = TODOS.where('ownerUid','==', currentUser.uid).onSnapshot(snap=>{
+    allTodos = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    renderTodoList();
+    renderChecklistCalendar();   // 마감 있는 할일은 달력에도 표시
+  }, err=>{ console.error('할일 로드 실패', err); });
+}
+
+function renderTodoList(){
+  const wrap = document.getElementById('todoList');
+  if(!wrap || !currentUser) return;
+  const items = allTodos.filter(t=>!t.done);
+  // 정렬: 마감 있는 것 먼저(가까운 날짜순), 그다음 무기한(최근 추가순)
+  items.sort((a,b)=>{
+    const ad = a.deadline || '', bd = b.deadline || '';
+    if(ad && bd) return ad < bd ? -1 : ad > bd ? 1 : (a.seq||0)-(b.seq||0);
+    if(ad && !bd) return -1;
+    if(!ad && bd) return 1;
+    return (b.seq||0)-(a.seq||0);
+  });
+  if(!items.length){ wrap.innerHTML = '<div class="todo-empty">할일이 없어요. 위에서 추가해보세요.</div>'; return; }
+  const today = todayStr();
+  wrap.innerHTML = items.map(t=>{
+    const hasD = !!t.deadline;
+    const overdue = hasD && t.deadline < today;
+    const badge = hasD
+      ? `<span class="todo-badge deadline ${overdue?'overdue':''}">마감 ${t.deadline}${overdue?' (지남)':''}</span>`
+      : `<span class="todo-badge">무기한</span>`;
+    return `<div class="todo-row" data-id="${t.id}">
+      <div class="todo-check" data-act="done" title="완료"></div>
+      <span class="todo-dot ${hasD?'deadline':'none'}"></span>
+      <div class="todo-main"><div class="todo-text">${escapeHtml(t.text)}</div>${badge}</div>
+      <div class="todo-actions">
+        <button data-act="edit" title="수정">✎</button>
+        <button data-act="del" title="삭제">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function completeTodo(id){
+  try{ await TODOS.doc(id).update({ done:true, completedAt: new Date().toISOString() }); logAction('할일 완료', ''); }
+  catch(err){ alert('완료 처리 실패: ' + err.message); }
+}
+async function deleteTodo(id){
+  if(!await customConfirm('이 할일을 삭제할까요?')) return;
+  try{ await TODOS.doc(id).delete(); }catch(err){ alert('삭제 실패: ' + err.message); }
+}
+async function editTodo(id){
+  const t = allTodos.find(x=>x.id===id); if(!t) return;
+  const nv = prompt('할일 수정', t.text);
+  if(nv===null) return;
+  const text = nv.trim(); if(!text) return;
+  try{ await TODOS.doc(id).update({ text }); }catch(err){ alert('수정 실패: ' + err.message); }
+}
+
+document.getElementById('todoList').addEventListener('click', (e)=>{
+  const row = e.target.closest('.todo-row'); if(!row) return;
+  const id = row.dataset.id;
+  const act = e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act;
+  if(act==='done') completeTodo(id);
+  else if(act==='edit') editTodo(id);
+  else if(act==='del') deleteTodo(id);
+});
+
+document.getElementById('todoDeadlineToggle').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip'); if(!chip) return;
+  todoDeadlineMode = chip.dataset.v;
+  [...document.querySelectorAll('#todoDeadlineToggle .chip')].forEach(c=>c.classList.toggle('active', c===chip));
+  document.getElementById('todoDeadlineField').style.display = (todoDeadlineMode==='deadline') ? '' : 'none';
+});
+document.getElementById('todoDeadlineInput').addEventListener('click', function(){ try{ this.showPicker(); }catch(e){} });
+
+document.getElementById('todoAddBtn').onclick = async ()=>{
+  const text = document.getElementById('todoTextInput').value.trim();
+  if(!text){ alert('할일을 입력해주세요.'); return; }
+  let deadline = '';
+  if(todoDeadlineMode === 'deadline'){
+    deadline = document.getElementById('todoDeadlineInput').value;
+    if(!deadline){ alert('마감일을 선택하거나 무기한으로 바꿔주세요.'); return; }
+  }
+  try{
+    await TODOS.add({ ownerUid: currentUser.uid, ownerName: currentUser.displayName, text, deadline, done:false, seq: Date.now() });
+    document.getElementById('todoTextInput').value = '';
+    logAction('할일 추가', text);
+  }catch(err){ alert('추가 실패: ' + err.message); }
+};
 
 /* ---- Default seed (yeriberry only, first time) ---- */
 const DEFAULT_CHECKLIST_TEMPLATES = [
@@ -2651,6 +2784,12 @@ function renderChecklistCalendar(){
     const d = parseInt(it.date.slice(8,10),10);
     (itemsByDay[d] = itemsByDay[d]||[]).push(it);
   });
+  // 마감 있는 할일을 마감일 칸에 표시 (완료 안 된 것만 — 완료하면 사라지고 다음 달로도 안 넘어감)
+  const todosByDay = {};
+  allTodos.filter(t=>!t.done && t.deadline && t.deadline.slice(0,7)===clCurrentMonth).forEach(t=>{
+    const d = parseInt(t.deadline.slice(8,10),10);
+    (todosByDay[d] = todosByDay[d]||[]).push(t);
+  });
 
   let html = WEEKDAYS.map(w=>`<div class="cl-cal-dow">${w}</div>`).join('');
   for(let i=0;i<firstDow;i++) html += `<div class="cl-cal-cell empty"></div>`;
@@ -2659,19 +2798,21 @@ function renderChecklistCalendar(){
     const isToday = dateStr === todayS;
     const items = (itemsByDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
     const pills = items.map(it=>`<span class="cl-pill ${it.done?'done':''}" draggable="true" data-id="${it.id}" title="${escapeAttr(it.text)}">${escapeHtml(it.text)}</span>`).join('');
-    html += `<div class="cl-cal-cell ${isToday?'today':''}" data-date="${dateStr}"><span class="cl-cal-daynum">${d}</span>${pills}</div>`;
+    const todoPills = (todosByDay[d]||[]).map(t=>`<span class="cl-pill todo" draggable="false" data-id="${t.id}" data-type="todo" title="${escapeAttr('할일 마감: '+t.text)}">${escapeHtml(t.text)}</span>`).join('');
+    html += `<div class="cl-cal-cell ${isToday?'today':''}" data-date="${dateStr}"><span class="cl-cal-daynum">${d}</span>${pills}${todoPills}</div>`;
   }
   grid.innerHTML = html;
 }
 document.getElementById('clCalendarGrid').addEventListener('click', (e)=>{
   const pill = e.target.closest('.cl-pill');
   if(!pill) return;
+  if(pill.dataset.type==='todo'){ completeTodo(pill.dataset.id); return; } // 달력에서 할일 완료 → 사라짐(다음 달로 안 넘어감)
   toggleDailyItemDone(pill.dataset.id);
 });
 let clDragId = null;
 document.getElementById('clCalendarGrid').addEventListener('dragstart', (e)=>{
   const pill = e.target.closest('.cl-pill');
-  if(!pill) return;
+  if(!pill || pill.dataset.type==='todo') return;
   clDragId = pill.dataset.id;
   pill.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
