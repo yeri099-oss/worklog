@@ -129,12 +129,12 @@
   .suggest-item.active, .suggest-item:hover{ background:var(--seal-soft); }
   .suggest-item:active{ background:var(--paper); }
 
-  input[type=text], input[type=password], input[type=email], textarea, input[type=date]{
+  input[type=text], input[type=password], input[type=email], textarea, input[type=date], input[type=month]{
     width:100%; font-family:inherit; font-size:14.5px; color:var(--ink);
     border:1px solid var(--rule-strong); border-radius:10px; background:var(--paper);
-    padding:9px 11px; outline:none;
+    padding:9px 11px; outline:none; box-sizing:border-box;
   }
-  input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, textarea:focus{ border-color: var(--seal); background:#fff; }
+  input[type=text]:focus, input[type=password]:focus, input[type=email]:focus, textarea:focus, input[type=date]:focus, input[type=month]:focus{ border-color: var(--seal); background:#fff; }
   textarea{ min-height:58px; resize:vertical; line-height:1.45; }
   .field{ margin-bottom:10px; }
 
@@ -451,17 +451,23 @@
   .dash-day-cell.dragover{ outline:2px dashed var(--seal); outline-offset:-2px; }
   /* 10일마다 굵은 가로줄 (10·20·30일 아래) */
   .dash-row-mark{ box-shadow: inset 0 -2px 0 0 var(--ink); }
-  .dash-pill{ font-size:9px; padding:1px 4px; border-radius:6px; background:var(--seal-soft); color:var(--seal); cursor:grab; white-space:normal; word-break:break-word; line-height:1.3; }
+  .dash-pill{ font-size:9px; padding:1px 4px; border-radius:6px; background:var(--seal-soft); color:var(--seal); cursor:grab; white-space:normal; word-break:break-word; line-height:1.3; touch-action:none; -webkit-user-select:none; user-select:none; }
   .dash-pill.dragging{ opacity:.3; }
+  /* 여러 날(기간) 일정: 시작칸에 내용 표시, 이어지는 칸은 색 막대(세로로 연결되는 느낌) */
+  .dash-pill.span-start{ border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .dash-pill.span-cont{ background:var(--seal); color:transparent; min-height:11px; border-radius:0; }
+  .dash-pill.span-end{ border-top-left-radius:0; border-top-right-radius:0; border-bottom-left-radius:6px; border-bottom-right-radius:6px; }
   .del-btn{ margin-left:auto; font-size:11px; color:var(--seal); background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:4px 10px; cursor:pointer; font-family:inherit; }
 
-  /* ===== Dashboard: 화면 전체 폭으로 펼치기 (대시보드 탭일 때만) ===== */
-  body.dash-full{ overflow-x:hidden; }
-  body.dash-full .dash-grid-scroll{
-    width:100vw;
-    margin-left:calc(50% - 50vw);
-    padding-left:8px; padding-right:8px;
-    box-sizing:border-box;
+  /* ===== Dashboard: 화면 크기에 따라 자동 (넓으면 전체 폭, 좁으면 가운데+가로스크롤) ===== */
+  @media (min-width: 1100px){
+    body.dash-full{ overflow-x:hidden; }
+    body.dash-full .dash-grid-scroll{
+      width:100vw;
+      margin-left:calc(50% - 50vw);
+      padding-left:8px; padding-right:8px;
+      box-sizing:border-box;
+    }
   }
 
   /* ===== Mobile ===== */
@@ -730,15 +736,18 @@
     <button class="arrow" id="dashYearNext">›</button>
   </div>
   <div class="add-card">
-    <label class="field-label">날짜</label>
+    <label class="field-label">시작일</label>
     <div class="field"><input type="date" id="dashDateInput"></div>
+    <label class="field-label">종료일 (선택 — 여러 날 이어지는 일정이면 입력)</label>
+    <div class="field"><input type="date" id="dashEndDateInput"></div>
+    <div id="dashSpanHint" style="font-size:11.5px; color:var(--seal); margin:-4px 2px 10px; display:none;"></div>
     <label class="field-label">구분 (선택)</label>
     <div class="field"><input type="text" id="dashCategoryInput" placeholder="예: 인사동, 북촌, 추석"></div>
     <label class="field-label">내용</label>
     <div class="field"><input type="text" id="dashTextInput" placeholder="예: 봄스페셜 시연"></div>
     <button class="add-btn" id="dashAddBtn">+ 대시보드에 추가</button>
   </div>
-  <p style="font-size:11.5px; color:var(--ink-soft); margin:12px 0 8px;">일정을 드래그해서 다른 날짜로 옮길 수 있어요. 항목을 클릭하면 삭제할 수 있어요.</p>
+  <p style="font-size:11.5px; color:var(--ink-soft); margin:12px 0 8px;">여러 날 일정은 종료일까지 색 막대로 이어져 보여요. 드래그하면 <b>같은 일수(기간)를 유지한 채</b> 통째로 옮겨져요. 항목을 클릭하면 삭제할 수 있어요.</p>
   <div class="dash-grid-scroll">
     <div class="dash-grid" id="dashGrid"></div>
   </div>
@@ -914,6 +923,7 @@ const DAILY_CL = db.collection('workLogApp_daily_checklist');
 const MONTHLY_CL = db.collection('workLogApp_monthly_checklist');
 const CL_TEMPLATES = db.collection('workLogApp_checklist_templates');
 const DASHBOARD = db.collection('workLogApp_dashboard_events');
+const LOGIN = db.collection('workLogApp_login'); // 로그인용 아이디→이메일 조회(공개). 프로필 본체는 비공개로 잠금
 const PSEUDO_DOMAIN = '@worklog-app.local';
 function toPseudoEmail(username){ return username.toLowerCase() + PSEUDO_DOMAIN; }
 
@@ -2033,17 +2043,9 @@ function logAction(action, detail){
 }
 
 async function ensureBootstrapAdmin(){
-  try{
-    const snap = await PROFILES.limit(1).get();
-    if(!snap.empty) return;
-    const secondary = firebase.initializeApp(firebaseConfig, 'bootstrap-' + Date.now());
-    try{
-      const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail('admin'), 'admin1234');
-      await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id:'admin', role:'admin' });
-      await secondary.auth().signOut();
-    }catch(e){ /* 이미 만들어져 있거나 오프라인이면 무시 */ }
-    try{ await secondary.delete(); }catch(e){}
-  }catch(e){ /* offline: 로그인 시도할 때 오류로 안내됨 */ }
+  // 보안상 하드코딩된 기본 관리자(admin/admin1234) 자동 생성을 제거했습니다.
+  // 최초 관리자는 Firebase 콘솔에서 직접 만들어 주세요(계정 생성 후 프로필 role='admin').
+  return;
 }
 
 function teardownSubscriptions(){
@@ -2130,13 +2132,15 @@ document.getElementById('loginId').addEventListener('keydown', e=>{ if(e.key==='
 
 let pendingLoginLog = false;
 async function resolveAuthEmail(id){
+  // 로그인 전(비인증) 조회. 1순위: 공개 로그인 컬렉션. 2순위(전환기 안전망): 프로필(규칙 잠그기 전까지만 읽힘).
+  try{
+    const doc = await LOGIN.doc(id.toLowerCase()).get();
+    if(doc.exists && doc.data().authEmail) return doc.data().authEmail;
+  }catch(e){}
   try{
     const snap = await PROFILES.where('id','==', id).limit(1).get();
-    if(!snap.empty){
-      const data = snap.docs[0].data();
-      if(data.authEmail) return data.authEmail;
-    }
-  }catch(e){ /* 조회 실패 시 기본값 사용 */ }
+    if(!snap.empty && snap.docs[0].data().authEmail) return snap.docs[0].data().authEmail;
+  }catch(e){ /* 규칙 잠금 후엔 여기서 막히지만, 그땐 이미 로그인 컬렉션에 정보가 있음 */ }
   return toPseudoEmail(id);
 }
 
@@ -2188,13 +2192,14 @@ document.getElementById('signupBtn').onclick = async ()=>{
   btn.disabled = true; btn.textContent = '가입 중…';
   signupInProgress = true;
   try{
-    const existing = await PROFILES.where('id','==', id).limit(1).get();
-    if(!existing.empty){ err.textContent = '이미 사용 중인 아이디입니다.'; return; }
+    const existing = await LOGIN.doc(id.toLowerCase()).get();
+    if(existing.exists){ err.textContent = '이미 사용 중인 아이디입니다.'; return; }
     const cred = await auth.createUserWithEmailAndPassword(email, pw);
     await cred.user.updateProfile({ displayName: id });
     await PROFILES.doc(cred.user.uid).set({
       id, name, email, authEmail: email, role: 'user', approved: false
     });
+    await LOGIN.doc(id.toLowerCase()).set({ authEmail: email }); // 로그인 조회용
     await auth.signOut();
     showAuthPanel('loginPanel');
     document.getElementById('loginErr').textContent = '가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있어요.';
@@ -2436,7 +2441,9 @@ document.getElementById('addAcctBtn').onclick = async ()=>{
   const secondary = firebase.initializeApp(firebaseConfig, 'create-' + Date.now());
   try{
     const cred = await secondary.auth().createUserWithEmailAndPassword(toPseudoEmail(id), pw);
-    await secondary.firestore().collection('workLogApp_profiles').doc(cred.user.uid).set({ id, role: newAcctRole, authEmail: toPseudoEmail(id), approved: true });
+    // 프로필 문서는 "관리자 계정(기본 앱)"으로 저장 → 보안 규칙이 관리자 생성으로 인식(자가 승격은 계속 차단)
+    await db.collection('workLogApp_profiles').doc(cred.user.uid).set({ id, role: newAcctRole, authEmail: toPseudoEmail(id), approved: true });
+    await LOGIN.doc(id.toLowerCase()).set({ authEmail: toPseudoEmail(id) }); // 로그인 조회용
     await secondary.auth().signOut();
     logAction('계정 추가', `${id} (${newAcctRole==='admin'?'관리자':'일반'})`);
     document.getElementById('newAcctId').value = '';
@@ -2862,13 +2869,38 @@ function startDashboardSync(){
   }, err=>{ console.error('대시보드 로드 실패', err); });
 }
 
+// 두 날짜(YYYY-MM-DD) 사이의 일수 차이 (b - a)
+function daysBetween(a, b){ return Math.round((parseDate(b) - parseDate(a)) / 86400000); }
+// 일정 하나를 기간(시작~종료)으로 펼침
+function dashExpand(e){
+  const start = e.date;
+  let end = (e.endDate && e.endDate >= start) ? e.endDate : start;
+  const dates = [];
+  let cur = start, guard = 0;
+  while(cur <= end && guard < 800){ dates.push(cur); cur = shiftDate(cur, 1); guard++; }
+  return { start, end, dates, span: dates.length };
+}
+
 function renderDashboard(){
   const grid = document.getElementById('dashGrid');
   if(!grid || !currentUser) return;
   document.getElementById('dashYearLabel').textContent = dashCurrentYear + '년';
-  const eventsThisYear = allDashboardEvents.filter(e => e.date && e.date.slice(0,4) === String(dashCurrentYear));
-  const byDate = {};
-  eventsThisYear.forEach(e=>{ (byDate[e.date] = byDate[e.date] || []).push(e); });
+
+  // 일정을 기간으로 펼쳐서 날짜별 칸에 배치 (같은 해에 걸치는 날짜만)
+  const cellItems = {};
+  allDashboardEvents.forEach(e=>{
+    if(!e.date) return;
+    const info = dashExpand(e);
+    let firstShown = false;   // 이 해에서 처음 보이는 칸에 반드시 내용 라벨 표시(연도 넘김 대비)
+    info.dates.forEach((ds, i)=>{
+      if(ds.slice(0,4) !== String(dashCurrentYear)) return;
+      let role = 'single';
+      if(info.span > 1){ role = (i===0) ? 'start' : (i===info.dates.length-1 ? 'end' : 'cont'); }
+      const showLabel = (role === 'single' || role === 'start' || !firstShown);
+      firstShown = true;
+      (cellItems[ds] = cellItems[ds] || []).push({ e, role, showLabel, start:info.start, end:info.end, span:info.span, inst:ds });
+    });
+  });
 
   // 각 월의 일수 미리 계산
   const daysInMonth = [];
@@ -2889,10 +2921,15 @@ function renderDashboard(){
         continue;
       }
       const dateStr = `${dashCurrentYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const items = (byDate[dateStr] || []).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+      const items = (cellItems[dateStr] || []).slice().sort((a,b)=>((a.e.seq||0)-(b.e.seq||0)));
       const pills = items.map(it=>{
-        const label = (it.category ? escapeHtml(it.category) + ': ' : '') + escapeHtml(it.text);
-        return `<span class="dash-pill" draggable="true" data-id="${it.id}" title="${escapeAttr((it.category?it.category+': ':'')+it.text)}">${label}</span>`;
+        const full = (it.e.category ? it.e.category + ': ' : '') + it.e.text;
+        const title = escapeAttr(full + (it.span>1 ? ` (${it.span}일간: ${it.start} ~ ${it.end})` : ''));
+        let cls = 'dash-pill', inner = '';
+        if(it.role === 'single'){ inner = escapeHtml(full); }
+        else if(it.showLabel){ inner = escapeHtml(full); cls += (it.role === 'end') ? ' span-end' : ' span-start'; }
+        else { cls += ' span-cont' + (it.role === 'end' ? ' span-end' : ''); }
+        return `<span class="${cls}" draggable="false" data-id="${it.e.id}" data-inst="${it.inst}" data-start="${it.start}" data-end="${it.end}" title="${title}">${inner}</span>`;
       }).join('');
       html += `<div class="dash-day-cell${markCls}" data-date="${dateStr}">${pills}</div>`;
     }
@@ -2903,69 +2940,104 @@ function renderDashboard(){
 document.getElementById('dashYearPrev').onclick = ()=>{ dashCurrentYear--; renderDashboard(); };
 document.getElementById('dashYearNext').onclick = ()=>{ dashCurrentYear++; renderDashboard(); };
 
+// 시작일/종료일 입력 시 "N일간" 안내 표시
+function dashUpdateSpanHint(){
+  const s = document.getElementById('dashDateInput').value;
+  const e = document.getElementById('dashEndDateInput').value;
+  const hint = document.getElementById('dashSpanHint');
+  if(!hint) return;
+  if(s && e && e < s){ hint.style.display='block'; hint.style.color='#DC2626'; hint.textContent='종료일이 시작일보다 빨라요.'; return; }
+  if(s && e && e > s){ hint.style.display='block'; hint.style.color='var(--seal)'; hint.textContent = (daysBetween(s,e)+1) + '일간 이어지는 일정'; return; }
+  hint.style.display='none';
+}
+document.getElementById('dashDateInput').addEventListener('change', dashUpdateSpanHint);
+document.getElementById('dashEndDateInput').addEventListener('change', dashUpdateSpanHint);
+
 document.getElementById('dashAddBtn').onclick = async ()=>{
   const date = document.getElementById('dashDateInput').value;
+  let endDate = document.getElementById('dashEndDateInput').value || date;
+  if(endDate < date) endDate = date;
   const category = document.getElementById('dashCategoryInput').value.trim();
   const text = document.getElementById('dashTextInput').value.trim();
-  if(!date || !text){ alert('날짜와 내용을 입력해주세요.'); return; }
+  if(!date || !text){ alert('시작일과 내용을 입력해주세요.'); return; }
   try{
     await DASHBOARD.add({
       ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-      date, category, text, seq: Date.now()
+      date, endDate, category, text, seq: Date.now()
     });
+    document.getElementById('dashEndDateInput').value = '';
     document.getElementById('dashCategoryInput').value = '';
     document.getElementById('dashTextInput').value = '';
+    dashUpdateSpanHint();
     logAction('대시보드 일정 추가', text);
   }catch(err){ alert('추가 실패: ' + err.message); }
 };
 
-document.getElementById('dashGrid').addEventListener('click', async (e)=>{
-  const pill = e.target.closest('.dash-pill');
-  if(!pill) return;
-  if(!await customConfirm('이 일정을 삭제할까요?')) return;
-  try{ await DASHBOARD.doc(pill.dataset.id).delete(); }
-  catch(err){ alert('삭제 실패: ' + err.message); }
-});
-
-let dashDragId = null;
-document.getElementById('dashGrid').addEventListener('dragstart', (e)=>{
-  const pill = e.target.closest('.dash-pill');
-  if(!pill) return;
-  dashDragId = pill.dataset.id;
-  pill.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-  e.dataTransfer.setData('text/plain', dashDragId);
-});
-document.getElementById('dashGrid').addEventListener('dragend', (e)=>{
-  const pill = e.target.closest('.dash-pill');
-  if(pill) pill.classList.remove('dragging');
-  document.querySelectorAll('.dash-day-cell.dragover').forEach(c=>c.classList.remove('dragover'));
-  dashDragId = null;
-});
-document.getElementById('dashGrid').addEventListener('dragover', (e)=>{
-  if(!dashDragId) return;
-  const cell = e.target.closest('.dash-day-cell');
-  if(!cell) return;
-  e.preventDefault();
-  cell.classList.add('dragover');
-});
-document.getElementById('dashGrid').addEventListener('dragleave', (e)=>{
-  const cell = e.target.closest('.dash-day-cell');
-  if(cell) cell.classList.remove('dragover');
-});
-document.getElementById('dashGrid').addEventListener('drop', async (e)=>{
-  e.preventDefault();
-  const cell = e.target.closest('.dash-day-cell');
-  document.querySelectorAll('.dash-day-cell.dragover').forEach(c=>c.classList.remove('dragover'));
-  if(!cell || !dashDragId) return;
-  const newDate = cell.dataset.date;
-  const id = dashDragId;
-  dashDragId = null;
-  try{
-    await DASHBOARD.doc(id).update({ date: newDate });
-    logAction('대시보드 일정 이동', newDate);
-  }catch(err){ alert('이동 실패: ' + err.message); }
-});
+// 포인터 기반 드래그/클릭 (마우스 + 터치 모두 지원)
+// - 살짝 눌렀다 떼면(움직임 6px 미만) = 클릭 → 삭제
+// - 끌면 = 이동 (기간(일수) 유지한 채 통째로 이동)
+(function(){
+  const gridEl = document.getElementById('dashGrid');
+  if(!gridEl) return;
+  let p = null;
+  function clearDragover(except){
+    document.querySelectorAll('.dash-day-cell.dragover').forEach(c=>{ if(c!==except) c.classList.remove('dragover'); });
+  }
+  function cellAt(x, y){
+    const el = document.elementFromPoint(x, y);
+    return (el && el.closest) ? el.closest('.dash-day-cell[data-date]') : null;
+  }
+  gridEl.addEventListener('pointerdown', (e)=>{
+    const pill = e.target.closest('.dash-pill');
+    if(!pill) return;
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    p = { id:pill.dataset.id, inst:pill.dataset.inst, start:pill.dataset.start,
+          end:pill.dataset.end || pill.dataset.start, x0:e.clientX, y0:e.clientY, moved:false, pill };
+  });
+  gridEl.addEventListener('pointermove', (e)=>{
+    if(!p) return;
+    if(!p.moved){
+      if(Math.abs(e.clientX-p.x0) < 6 && Math.abs(e.clientY-p.y0) < 6) return;
+      p.moved = true;
+      p.pill.classList.add('dragging');
+      document.body.style.userSelect = 'none';
+    }
+    e.preventDefault();
+    const cell = cellAt(e.clientX, e.clientY);
+    clearDragover(cell);
+    if(cell) cell.classList.add('dragover');
+  }, { passive:false });
+  gridEl.addEventListener('pointerup', async (e)=>{
+    if(!p) return;
+    const d = p; p = null;
+    document.body.style.userSelect = '';
+    clearDragover(null);
+    if(d.pill) d.pill.classList.remove('dragging');
+    if(!d.moved){
+      // 클릭 = 삭제
+      if(!await customConfirm('이 일정을 삭제할까요?')) return;
+      try{ await DASHBOARD.doc(d.id).delete(); }
+      catch(err){ alert('삭제 실패: ' + err.message); }
+      return;
+    }
+    // 드래그 = 이동 (기간 유지)
+    const cell = cellAt(e.clientX, e.clientY);
+    if(!cell) return;
+    const delta = daysBetween(d.inst, cell.dataset.date);
+    if(delta === 0) return;
+    const newStart = shiftDate(d.start, delta), newEnd = shiftDate(d.end, delta);
+    try{
+      await DASHBOARD.doc(d.id).update({ date:newStart, endDate:newEnd });
+      logAction('대시보드 일정 이동', newStart + (newEnd!==newStart ? ' ~ '+newEnd : ''));
+    }catch(err){ alert('이동 실패: ' + err.message); }
+  });
+  gridEl.addEventListener('pointercancel', ()=>{
+    if(p && p.pill) p.pill.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    clearDragover(null);
+    p = null;
+  });
+})();
 
 
 /* ============ Boot ============ */
