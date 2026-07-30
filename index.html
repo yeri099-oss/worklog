@@ -193,15 +193,14 @@
   }
   .entry .content-line{
     flex:1; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink);
-    white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;
     border-right:1.5px solid var(--rule-strong);
-    padding:9px 10px; display:flex; align-items:center; justify-content:flex-start; text-align:left;
+    padding:9px 10px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; text-align:left; gap:4px;
   }
-  .entry .insp{
-    flex:none; width:auto; min-width:0; font-size:12px; color:var(--ink-soft);
-    white-space:normal; word-break:break-word; overflow-wrap:anywhere;
-    border-right:1.5px solid var(--rule-strong);
-    padding:9px 10px; display:flex; align-items:center; justify-content:center; text-align:center;
+  .entry .content-main, .rc-row .content-main{ white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
+  .entry .insp-inline, .rc-row .insp-inline{
+    display:block; font-size:11.5px; color:var(--ink-soft); background:var(--paper);
+    border-left:2px solid var(--rule-strong); padding:3px 8px; border-radius:0 4px 4px 0;
+    white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere;
   }
   .entry .note-col{
     flex:none; width:auto; min-width:56px; padding:9px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
@@ -303,8 +302,7 @@
   .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:12.5px; width: -webkit-fit-content; width: -moz-fit-content; width: fit-content; max-width:100%; }
   .rc-row:last-child{ border-bottom:none; }
   .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink); font-size:11px; white-space:nowrap; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
-  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
-  .rc-row .rc-insp{ flex:none; width:auto; min-width:0; font-size:11px; color:var(--ink-soft); white-space:normal; word-break:break-word; overflow-wrap:anywhere; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:center; text-align:center; }
+  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; text-align:left; gap:3px; }
   .rc-row .rc-note-col{
     flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
     font-size:10px; font-weight:600; color:var(--ink-soft); background:transparent;
@@ -434,12 +432,6 @@
       width:100% !important; border-right:none !important;
       padding:6px 2px !important;
     }
-    .entry .insp{
-      width:100% !important; border-right:none !important;
-      border-bottom:1px dashed var(--rule); padding:4px 2px !important;
-      justify-content:flex-start !important; text-align:left !important;
-    }
-    .entry .insp:empty{ display:none; }
     .entry .note-col{
       width:auto !important; min-width:52px; margin-left:0; margin-top:4px;
       flex-direction:row !important; gap:6px; padding:4px 10px !important; border-radius:6px;
@@ -1527,13 +1519,12 @@ function renderList(){
       const cls = noteClass(note) + (isStaleEntry(e) ? ' stale' : '');
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
       const handle = groupedView ? '' : `<span class="drag-handle" draggable="true" title="드래그해서 순서 변경">⠿</span>`;
-      const insp = `<span class="insp">${e.inspection ? escapeHtml(e.inspection) : ''}</span>`;
+      const inspLine = e.inspection ? `<span class="insp-inline">점검 · ${escapeHtml(e.inspection)}</span>` : '';
       return `
         <div class="entry" data-id="${e.id}">
           ${handle}
           <span class="cat">${escapeHtml(e.category)}</span>
-          <span class="content-line">${escapeHtml(e.content)}</span>
-          ${insp}
+          <span class="content-line"><span class="content-main">${escapeHtml(e.content)}</span>${inspLine}</span>
           <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }
@@ -1652,8 +1643,8 @@ function syncAllDayColumns(){
   document.querySelectorAll('#listWrap .day-entries').forEach(container=>{
     const rows = [...container.querySelectorAll('.entry')];
     syncRowColumns(rows, {
-      handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col', inspSel:'.insp',
-      catBuffer:14, noteBuffer:14, inspBuffer:14, contentMode:'fill'
+      handleSel:'.drag-handle', catSel:'.cat', contentSel:'.content-line', noteSel:'.note-col',
+      catBuffer:14, noteBuffer:14, contentMode:'fill'
     });
   });
 }
@@ -1842,18 +1833,18 @@ function buildReport(){
       const note = e.note || '';
       const dday = e.dueDate ? computeDday(e.dueDate) : '';
       const rcCls = noteClass(note) + (isStaleEntry(e) ? ' stale' : '');
+      const rcInspLine = e.inspection ? `<span class="insp-inline">점검 · ${escapeHtml(e.inspection)}</span>` : '';
       return `
         <div class="rc-row">
           <span class="rc-cat">${escapeHtml(e.category)}</span>
-          <span class="rc-content">${escapeHtml(e.content)}</span>
-          <span class="rc-insp">${e.inspection ? escapeHtml(e.inspection) : ''}</span>
+          <span class="rc-content"><span class="content-main">${escapeHtml(e.content)}</span>${rcInspLine}</span>
           <span class="rc-note-col ${rcCls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
         </div>`;
     }).join('');
   }
   syncRowColumns(document.querySelectorAll('#reportCaptureBody .rc-row'), {
-    handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col', inspSel:'.rc-insp',
-    catBuffer:12, noteBuffer:12, inspBuffer:12, contentMode:'fit'
+    handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col',
+    catBuffer:12, noteBuffer:12, contentMode:'fit'
   });
   {
     const firstRow = document.querySelector('#reportCaptureBody .rc-row');
