@@ -578,6 +578,10 @@
   </div>
 
   <div class="month-select-wrap">
+    <span class="month-select-wrap" id="yearSelectWrap" style="margin-right:6px;">
+      <button class="month-select-btn" id="yearSelectBtn">2026년 ▾</button>
+      <div class="month-dropdown" id="yearDropdown"></div>
+    </span>
     <button class="month-select-btn" id="monthSelectBtn">7월 ▾</button>
     <div class="month-dropdown" id="monthDropdown"></div>
     <span class="month-select-wrap" id="ownerSelectWrap" style="display:none; margin-left:10px;">
@@ -1320,6 +1324,42 @@ function isStaleEntry(e){
   return diff >= 7;
 }
 
+function availableYears(){
+  const set = new Set(allEntries.map(e=>e.date.slice(0,4)));
+  set.add(currentMonth.slice(0,4));
+  set.add(todayStr().slice(0,4));
+  return [...set].sort((a,b)=> b-a);
+}
+function updateYearBtnLabel(){
+  document.getElementById('yearSelectBtn').textContent = currentMonth.slice(0,4) + '년 ▾';
+}
+function renderYearDropdown(){
+  const wrap = document.getElementById('yearDropdown');
+  const curYear = currentMonth.slice(0,4);
+  wrap.innerHTML = availableYears().map(y=>
+    `<div class="month-opt ${y===curYear?'active':''}" data-y="${y}">${y}년</div>`
+  ).join('');
+}
+document.getElementById('yearSelectBtn').onclick = (e)=>{
+  e.stopPropagation();
+  renderYearDropdown();
+  document.getElementById('yearDropdown').classList.toggle('open');
+};
+document.getElementById('yearDropdown').addEventListener('click', (e)=>{
+  const opt = e.target.closest('.month-opt');
+  if(!opt) return;
+  const y = opt.dataset.y;
+  const wantedMM = currentMonth.slice(5,7);
+  const monthsInYear = availableMonths().filter(m=>m.slice(0,4)===y);
+  const exact = monthsInYear.find(m=>m.slice(5,7)===wantedMM);
+  currentMonth = exact || monthsInYear[0] || `${y}-01`;
+  listMode = 'month';
+  document.getElementById('yearDropdown').classList.remove('open');
+  updateYearBtnLabel();
+  updateMonthBtnLabel();
+  renderList();
+});
+
 function availableMonths(){
   const set = new Set(allEntries.map(e=>e.date.slice(0,7)));
   set.add(currentMonth);
@@ -1332,7 +1372,9 @@ function updateMonthBtnLabel(){
 }
 function renderMonthDropdown(){
   const wrap = document.getElementById('monthDropdown');
-  wrap.innerHTML = availableMonths().map(m=>{
+  const curYear = currentMonth.slice(0,4);
+  const monthsInYear = availableMonths().filter(m=>m.slice(0,4)===curYear);
+  wrap.innerHTML = monthsInYear.map(m=>{
     const mm = parseInt(m.slice(5,7), 10);
     return `<div class="month-opt ${m===currentMonth?'active':''}" data-m="${m}">${mm}월</div>`;
   }).join('');
@@ -1351,12 +1393,14 @@ document.getElementById('monthDropdown').addEventListener('click', (e)=>{
   document.getElementById('searchInput').value = '';
   document.getElementById('dateJumpPicker').value = '';
   document.getElementById('monthDropdown').classList.remove('open');
+  updateYearBtnLabel();
   updateMonthBtnLabel();
   renderList();
 });
 document.addEventListener('click', (e)=>{
   if(!e.target.closest('.month-select-wrap')){
     document.getElementById('monthDropdown').classList.remove('open');
+    document.getElementById('yearDropdown').classList.remove('open');
   }
 });
 
@@ -1620,6 +1664,7 @@ window.addEventListener('resize', ()=>{
   clearTimeout(window.__resizeT);
   window.__resizeT = setTimeout(syncAllDayColumns, 150);
 });
+updateYearBtnLabel();
 updateMonthBtnLabel();
 
 document.getElementById('listWrap').addEventListener('click', (e)=>{
