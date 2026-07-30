@@ -439,12 +439,14 @@
   .dash-grid-scroll{ overflow:auto; padding-bottom:6px; max-height:calc(100vh - 150px); min-height:320px; border-radius:10px; }
   .dash-grid{
     display:grid;
-    grid-template-columns: 44px repeat(12, minmax(92px, 1fr));
+    grid-template-columns: 44px repeat(12, minmax(78px, 1fr));
     gap:1px;
     background:var(--rule-strong);
     border:1px solid var(--rule-strong);
     border-radius:10px;
-    min-width:max-content; /* 좁은 화면에서 넘칠 때도 그리드 배경(칸 구분선)이 12월까지 그려지도록 */
+    /* 넓은 화면: 12개월이 화면 폭에 꽉 차게(각 칸 1fr로 늘어남, 긴 글자는 줄바꿈).
+       좁은 화면: 아래 최소폭까지만 줄고 그 아래로는 가로 스크롤(칸 구분선도 12월까지 그려짐). */
+    min-width:1000px;
   }
   /* 코너(좌상단): 위·왼쪽 모두 고정 */
   .dash-corner{
