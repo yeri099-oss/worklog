@@ -739,7 +739,7 @@
   </div>
 
   <div id="clView-monthly" class="cl-view" style="display:none;">
-    <p class="cl-hint">월을 누르면 그 달부터 매달 반복할 루틴을 적을 수 있어요.</p>
+    <p class="cl-hint">월을 누르면 <b>매년 그 달에 반복할 루틴</b>을 적을 수 있어요. (예: 8월에 넣으면 매년 8월에 반복)</p>
     <div class="month-select-wrap" style="margin:8px 0 10px;">
       <button class="arrow" id="clYearPrev">‹</button>
       <span id="clYearLabel" class="serif" style="font-size:16px; font-weight:700; margin:0 10px;"></span>
@@ -3001,7 +3001,8 @@ function renderMonthlyChecklistView(){
   const wrap = document.getElementById('clMonthlyList');
   if(!wrap || !currentUser) return;
   document.getElementById('clYearLabel').textContent = `${clCurrentYear}년 루틴`;
-  // 매달 반복(everyMonth) 항목 + 예전 단월(legacy) 항목 분리
+  // 매년 반복(everyMonth) 항목 + 예전 단월(legacy) 항목 분리
+  // everyMonth 항목: startMonth의 '달'에 해당하는 칸에, 그 시작연도부터 매년 나타남 (예: 2026-08 → 매년 8월)
   const legacyByMonth = {};
   const recurringItems = [];
   allMonthlyChecklist.forEach(it=>{
@@ -3011,7 +3012,12 @@ function renderMonthlyChecklistView(){
   let html = '';
   for(let m=1; m<=12; m++){
     const key = `${clCurrentYear}-${String(m).padStart(2,'0')}`;
-    const recurring = recurringItems.filter(it => (it.startMonth||'') <= key).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+    const recurring = recurringItems.filter(it => {
+      if(!it.startMonth) return false;
+      const sy = parseInt(it.startMonth.slice(0,4),10);
+      const sm = parseInt(it.startMonth.slice(5,7),10);
+      return sm === m && clCurrentYear >= sy;   // 같은 '달' & 시작연도 이후의 모든 해
+    }).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
     const legacy = (legacyByMonth[key]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
     const all = [...recurring, ...legacy];
     const pills = all.length
@@ -3024,7 +3030,7 @@ function renderMonthlyChecklistView(){
     html += `<div class="cl-month-block${open?' open':''}" data-month="${key}">
       <div class="cl-month-head"><span>${m}월</span><span class="cl-add-hint">${open?'닫기':'+ 추가'}</span></div>
       <div class="cl-month-pills">${pills}</div>
-      <div class="cl-month-add" style="display:${open?'block':'none'}"><input type="text" class="cl-month-add-input" data-month="${key}" placeholder="+ 매달 반복할 루틴 입력 후 Enter"></div>
+      <div class="cl-month-add" style="display:${open?'block':'none'}"><input type="text" class="cl-month-add-input" data-month="${key}" placeholder="+ 매년 이 달에 반복할 루틴 입력 후 Enter"></div>
     </div>`;
   }
   wrap.innerHTML = html;
@@ -3045,7 +3051,7 @@ document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.cl-item-del');
   if(delBtn){
     const it = allMonthlyChecklist.find(x=>x.id===delBtn.dataset.id);
-    const msg = (it && it.everyMonth) ? '이 반복 항목을 삭제할까요? 모든 달에서 사라져요.' : '이 루틴 항목을 삭제할까요?';
+    const msg = (it && it.everyMonth) ? '이 반복 항목을 삭제할까요? 모든 해에서 사라져요.' : '이 루틴 항목을 삭제할까요?';
     if(!await customConfirm(msg)) return;
     try{ await MONTHLY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
     return;
@@ -3066,7 +3072,7 @@ document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
   const item = allMonthlyChecklist.find(x=>x.id===pill.dataset.id);
   if(!item) return;
   if(item.everyMonth){
-    // 매달 반복 항목 → 클릭한 그 달만 완료/해제 (doneMonths 맵)
+    // 매년 반복 항목 → 클릭한 그 해(연-월 칸)만 완료/해제 (doneMonths 맵: '연-월' 키)
     const key = pill.dataset.month;
     const dm = Object.assign({}, item.doneMonths||{});
     if(dm[key]) delete dm[key]; else dm[key] = todayStr();
@@ -3078,7 +3084,7 @@ document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
     catch(err){ alert('업데이트 실패: ' + err.message); }
   }
 });
-// 월별 입력칸: Enter로 그 달부터 매달 반복 루틴 추가
+// 월별 입력칸: Enter로 매년 그 달에 반복하는 루틴 추가
 document.getElementById('clMonthlyList').addEventListener('keydown', async (e)=>{
   const inp = e.target.closest('.cl-month-add-input');
   if(!inp || e.key !== 'Enter') return;
