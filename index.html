@@ -425,6 +425,7 @@
     background:var(--rule-strong);
     border:1px solid var(--rule-strong);
     border-radius:10px;
+    min-width:max-content; /* 좁은 화면에서 넘칠 때도 그리드 배경(칸 구분선)이 12월까지 그려지도록 */
   }
   /* 코너(좌상단): 위·왼쪽 모두 고정 */
   .dash-corner{
@@ -2952,6 +2953,11 @@ function dashUpdateSpanHint(){
 }
 document.getElementById('dashDateInput').addEventListener('change', dashUpdateSpanHint);
 document.getElementById('dashEndDateInput').addEventListener('change', dashUpdateSpanHint);
+// 날짜 칸을 클릭하면(아이콘 말고 칸 아무 데나) 바로 달력이 열리게
+['dashDateInput','dashEndDateInput'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('click', ()=>{ try{ el.showPicker(); }catch(e){} });
+});
 
 document.getElementById('dashAddBtn').onclick = async ()=>{
   const date = document.getElementById('dashDateInput').value;
