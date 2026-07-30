@@ -684,7 +684,9 @@
     <button class="cl-subnav-btn" data-view="daily">일별목록</button>
     <button class="cl-subnav-btn" data-view="monthly">월별루틴</button>
     <button class="cl-subnav-btn" data-view="todo">할일</button>
-    <button class="cl-subnav-btn" data-view="templates">반복설정</button>
+    <!-- 반복설정 탭 제거: 이제 '일별'에 넣으면 매달 그 날짜에, '월별'에 넣으면 매달 자동 반복됨.
+         기본 세무 항목 시딩도 꺼짐. 다시 보이게 하려면 아래 줄의 주석을 해제하세요:
+    <button class="cl-subnav-btn" data-view="templates">반복설정</button> -->
   </div>
 
   <div id="clView-calendar" class="cl-view">
@@ -698,11 +700,11 @@
 
   <div id="clView-daily" class="cl-view" style="display:none;">
     <div class="add-card">
-      <label class="field-label">날짜</label>
+      <label class="field-label">날짜 (매달 이 날짜에 자동 반복돼요)</label>
       <div class="field"><input type="date" id="clDailyDateInput"></div>
       <label class="field-label">내용</label>
-      <div class="field"><input type="text" id="clDailyTextInput" placeholder="체크리스트 항목"></div>
-      <button class="add-btn" id="clDailyAddBtn">+ 일별 체크리스트 추가</button>
+      <div class="field"><input type="text" id="clDailyTextInput" placeholder="예: 매출 정산"></div>
+      <button class="add-btn" id="clDailyAddBtn">+ 일별 반복 추가</button>
     </div>
     <div class="month-select-wrap" style="margin:14px 0 10px;">
       <button class="arrow" id="clDailyPrev">‹</button>
@@ -714,11 +716,11 @@
 
   <div id="clView-monthly" class="cl-view" style="display:none;">
     <div class="add-card">
-      <label class="field-label">월</label>
+      <label class="field-label">월 (이 달부터 매달 자동 반복돼요)</label>
       <div class="field"><input type="month" id="clMonthlyMonthInput"></div>
       <label class="field-label">내용</label>
-      <div class="field"><input type="text" id="clMonthlyTextInput" placeholder="체크리스트 항목"></div>
-      <button class="add-btn" id="clMonthlyAddBtn">+ 월별 루틴 추가</button>
+      <div class="field"><input type="text" id="clMonthlyTextInput" placeholder="예: 월 매출 마감"></div>
+      <button class="add-btn" id="clMonthlyAddBtn">+ 월별 반복 추가</button>
     </div>
     <div class="month-select-wrap" style="margin:14px 0 10px;">
       <button class="arrow" id="clYearPrev">‹</button>
@@ -2716,16 +2718,10 @@ const DEFAULT_CHECKLIST_TEMPLATES = [
 ].map(([category,text])=>({ text, category, recurrence:'monthly', day:28 })));
 
 async function seedDefaultTemplatesIfNeeded(){
-  if(seedAttempted || !currentUser) return;
+  // 기본 반복 항목(세무·급여 등) 자동 생성 비활성화.
+  // 반복설정 기능을 없애고, 사용자가 지운 항목이 다시 생기지 않게 함.
   seedAttempted = true;
-  if(currentUser.id !== 'yeriberry') return;
-  if(checklistTemplates.length > 0) return;
-  const batch = db.batch();
-  DEFAULT_CHECKLIST_TEMPLATES.forEach(t=>{
-    const ref = CL_TEMPLATES.doc();
-    batch.set(ref, { ownerUid: currentUser.uid, text:t.text, category:t.category, recurrence:t.recurrence, day:t.day, lastMaterializedMonth:'' });
-  });
-  try{ await batch.commit(); }catch(e){ console.error('기본 체크리스트 생성 실패', e); }
+  return;
 }
 
 /* ---- Materialize recurring templates into daily items ---- */
@@ -2750,7 +2746,7 @@ async function materializeTemplatesForMonth(yearMonth){
   toMaterialize.forEach((t, idx)=>{
     const day = Math.min(Math.max(parseInt(t.day,10) || 1, 1), daysInMonth);
     const dateStr = `${yearMonth}-${String(day).padStart(2,'0')}`;
-    const ref = DAILY_CL.doc();
+    const ref = DAILY_CL.doc('tpl_' + t.id + '_' + yearMonth); // 결정적 ID → 재생성 시 중복 없이 같은 문서
     batch.set(ref, {
       ownerUid: currentUser.uid, ownerName: currentUser.displayName,
       date: dateStr, text: t.text, category: t.category || '',
@@ -2877,6 +2873,18 @@ function renderDailyChecklistView(){
 document.getElementById('clDailyList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.cl-item-del');
   if(delBtn){
+    const it = allDailyChecklist.find(x=>x.id===delBtn.dataset.id);
+    if(it && it.templateId){
+      // 반복 항목 → 매달 반복 중단 + 다른 달 항목까지 함께 삭제
+      if(!await customConfirm('이 반복 항목을 삭제할까요? 매달 반복이 중단되고 다른 달의 같은 항목도 함께 사라져요.')) return;
+      try{
+        const batch = db.batch();
+        allDailyChecklist.filter(x=>x.templateId===it.templateId).forEach(x=> batch.delete(DAILY_CL.doc(x.id)));
+        batch.delete(CL_TEMPLATES.doc(it.templateId));
+        await batch.commit();
+      }catch(err){ alert('삭제 실패: '+err.message); }
+      return;
+    }
     if(!await customConfirm('이 체크리스트 항목을 삭제할까요?')) return;
     try{ await DAILY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
     return;
@@ -2888,15 +2896,29 @@ document.getElementById('clDailyAddBtn').onclick = async ()=>{
   const date = document.getElementById('clDailyDateInput').value;
   const text = document.getElementById('clDailyTextInput').value.trim();
   if(!date || !text){ alert('날짜와 내용을 입력해주세요.'); return; }
+  const dayNum = parseInt(date.slice(8,10), 10);
+  const ym = clCurrentMonth; // 지금 보고 있는 달에 즉시 표시
   try{
-    await DAILY_CL.add({
+    // 일별에 넣으면 = 매달 이 날짜에 자동 반복 (반복 엔진의 monthly 템플릿으로 저장)
+    const ref = await CL_TEMPLATES.add({ ownerUid: currentUser.uid, text, category:'', recurrence:'monthly', day: dayNum, lastMaterializedMonth:'' });
+    const yyyy = parseInt(ym.slice(0,4),10), mm = parseInt(ym.slice(5,7),10);
+    const dim = new Date(yyyy, mm, 0).getDate();
+    const d = Math.min(Math.max(dayNum,1), dim);
+    await DAILY_CL.doc('tpl_' + ref.id + '_' + ym).set({
       ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-      date, text, category:'', done:false, completedAt:'', templateId:null, seq: Date.now()
+      date: `${ym}-${String(d).padStart(2,'0')}`, text, category:'',
+      done:false, completedAt:'', templateId: ref.id, seq: Date.now()
     });
+    await CL_TEMPLATES.doc(ref.id).update({ lastMaterializedMonth: ym });
     document.getElementById('clDailyTextInput').value = '';
-    logAction('체크리스트 추가', text);
+    logAction('일별 반복 추가', text);
   }catch(err){ alert('추가 실패: ' + err.message); }
 };
+// 날짜/월 칸 클릭 시 달력 바로 열기
+['clDailyDateInput','clMonthlyMonthInput'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('click', ()=>{ try{ el.showPicker(); }catch(e){} });
+});
 document.getElementById('clDailyPrev').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,-1); materializeTemplatesForMonth(clCurrentMonth); renderDailyChecklistView(); };
 document.getElementById('clDailyNext').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,1); materializeTemplatesForMonth(clCurrentMonth); renderDailyChecklistView(); };
 
@@ -2908,16 +2930,24 @@ function renderMonthlyChecklistView(){
   if(!document.getElementById('clMonthlyMonthInput').value){
     document.getElementById('clMonthlyMonthInput').value = todayStr().slice(0,7);
   }
-  const byMonth = {};
-  allMonthlyChecklist.filter(it => it.month && it.month.slice(0,4) === String(clCurrentYear)).forEach(it=>{
-    (byMonth[it.month]=byMonth[it.month]||[]).push(it);
+  // 매달 반복(everyMonth) 항목 + 예전 단월(legacy) 항목 분리
+  const legacyByMonth = {};
+  const recurringItems = [];
+  allMonthlyChecklist.forEach(it=>{
+    if(it.everyMonth){ recurringItems.push(it); }
+    else if(it.month && it.month.slice(0,4) === String(clCurrentYear)){ (legacyByMonth[it.month]=legacyByMonth[it.month]||[]).push(it); }
   });
   let html = '';
   for(let m=1; m<=12; m++){
     const key = `${clCurrentYear}-${String(m).padStart(2,'0')}`;
-    const list = (byMonth[key]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
-    const pills = list.length
-      ? list.map(it=>`<span class="cl-month-pill ${it.done?'done':''}" data-id="${it.id}">${escapeHtml(it.text)}${it.done?` <span class="cl-item-meta">완료 ${escapeHtml(it.completedAt||'')}</span>`:''}<button class="cl-item-del" data-id="${it.id}">✕</button></span>`).join('')
+    const recurring = recurringItems.filter(it => (it.startMonth||'') <= key).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+    const legacy = (legacyByMonth[key]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+    const all = [...recurring, ...legacy];
+    const pills = all.length
+      ? all.map(it=>{
+          const done = it.everyMonth ? !!(it.doneMonths && it.doneMonths[key]) : !!it.done;
+          return `<span class="cl-month-pill ${done?'done':''}" data-id="${it.id}" data-month="${key}">${escapeHtml(it.text)}${done?` <span class="cl-item-meta">완료</span>`:''}<button class="cl-item-del" data-id="${it.id}">✕</button></span>`;
+        }).join('')
       : '<span style="color:var(--ink-soft); font-size:12.5px;">-</span>';
     html += `<div class="cl-month-block"><div class="cl-month-head">${m}월</div><div class="cl-month-pills">${pills}</div></div>`;
   }
@@ -2926,7 +2956,9 @@ function renderMonthlyChecklistView(){
 document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.cl-item-del');
   if(delBtn){
-    if(!await customConfirm('이 루틴 항목을 삭제할까요?')) return;
+    const it = allMonthlyChecklist.find(x=>x.id===delBtn.dataset.id);
+    const msg = (it && it.everyMonth) ? '이 반복 항목을 삭제할까요? 모든 달에서 사라져요.' : '이 루틴 항목을 삭제할까요?';
+    if(!await customConfirm(msg)) return;
     try{ await MONTHLY_CL.doc(delBtn.dataset.id).delete(); }catch(err){ alert('삭제 실패: '+err.message); }
     return;
   }
@@ -2934,21 +2966,31 @@ document.getElementById('clMonthlyList').addEventListener('click', async (e)=>{
   if(!pill) return;
   const item = allMonthlyChecklist.find(x=>x.id===pill.dataset.id);
   if(!item) return;
-  const newDone = !item.done;
-  try{ await MONTHLY_CL.doc(item.id).update({ done:newDone, completedAt: newDone?todayStr():'' }); }
-  catch(err){ alert('업데이트 실패: ' + err.message); }
+  if(item.everyMonth){
+    // 매달 반복 항목 → 클릭한 그 달만 완료/해제 (doneMonths 맵)
+    const key = pill.dataset.month;
+    const dm = Object.assign({}, item.doneMonths||{});
+    if(dm[key]) delete dm[key]; else dm[key] = todayStr();
+    try{ await MONTHLY_CL.doc(item.id).update({ doneMonths: dm }); }
+    catch(err){ alert('업데이트 실패: ' + err.message); }
+  } else {
+    const newDone = !item.done;
+    try{ await MONTHLY_CL.doc(item.id).update({ done:newDone, completedAt: newDone?todayStr():'' }); }
+    catch(err){ alert('업데이트 실패: ' + err.message); }
+  }
 });
 document.getElementById('clMonthlyAddBtn').onclick = async ()=>{
   const month = document.getElementById('clMonthlyMonthInput').value;
   const text = document.getElementById('clMonthlyTextInput').value.trim();
   if(!month || !text){ alert('월과 내용을 입력해주세요.'); return; }
   try{
+    // 월별에 넣으면 = 이 달부터 매달 자동 반복. 완료는 달마다 따로(doneMonths).
     await MONTHLY_CL.add({
       ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-      month, text, done:false, completedAt:'', seq: Date.now()
+      text, startMonth: month, everyMonth: true, doneMonths: {}, seq: Date.now()
     });
     document.getElementById('clMonthlyTextInput').value = '';
-    logAction('월별 루틴 추가', text);
+    logAction('월별 반복 추가', text);
   }catch(err){ alert('추가 실패: ' + err.message); }
 };
 document.getElementById('clYearPrev').onclick = ()=>{ clCurrentYear--; renderMonthlyChecklistView(); };
@@ -2989,7 +3031,22 @@ document.getElementById('clTplAddBtn').onclick = async ()=>{
   if(!text){ alert('내용을 입력해주세요.'); return; }
   if(!day || day<1 || day>31){ alert('기준일을 1~31 사이로 입력해주세요.'); return; }
   try{
-    await CL_TEMPLATES.add({ ownerUid: currentUser.uid, text, category, recurrence: clTplRecurrenceVal, day, lastMaterializedMonth: '' });
+    const ref = await CL_TEMPLATES.add({ ownerUid: currentUser.uid, text, category, recurrence: clTplRecurrenceVal, day, lastMaterializedMonth: '' });
+    // 이번 달에 반복 주기가 해당하면, 지금 보고 있는 달 달력에 즉시 생성 (새로고침 없이 바로 보이게)
+    const mmNow = parseInt(clCurrentMonth.slice(5,7), 10);
+    if(shouldMaterialize(clTplRecurrenceVal, mmNow)){
+      const yyyyNow = parseInt(clCurrentMonth.slice(0,4), 10);
+      const dimNow = new Date(yyyyNow, mmNow, 0).getDate();
+      const dNow = Math.min(Math.max(day, 1), dimNow);
+      const dateStr = `${clCurrentMonth}-${String(dNow).padStart(2,'0')}`;
+      // 결정적 ID → 일반 자동생성 로직과 같은 문서라 중복되지 않음
+      await DAILY_CL.doc('tpl_' + ref.id + '_' + clCurrentMonth).set({
+        ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+        date: dateStr, text, category: category || '',
+        done:false, completedAt:'', templateId: ref.id, seq: Date.now()
+      });
+      await CL_TEMPLATES.doc(ref.id).update({ lastMaterializedMonth: clCurrentMonth });
+    }
     logAction('반복 체크리스트 추가', text);
     document.getElementById('clTplTextInput').value = '';
     document.getElementById('clTplCategoryInput').value = '';
