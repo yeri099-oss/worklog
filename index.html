@@ -413,8 +413,14 @@
   .todo-actions button:hover{ background:var(--rule); color:var(--ink); }
   .todo-empty{ text-align:center; color:var(--ink-soft); font-size:13px; padding:24px 0; }
 
-  .cl-day-block{ margin-bottom:16px; }
+  .cl-day-block{ margin-bottom:14px; padding:10px 12px; border:1px solid var(--rule); border-radius:10px; background:#fff; }
+  .cl-day-block.today{ border-color:var(--seal); box-shadow:0 0 0 1px var(--seal) inset; }
   .cl-day-head{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:800; font-size:15px; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--rule-strong); }
+  .cl-today-tag{ display:inline-block; font-size:11px; font-weight:700; color:#fff; background:var(--seal); border-radius:999px; padding:1px 8px; margin-left:6px; vertical-align:middle; }
+  .cl-day-add{ padding-top:8px; }
+  .cl-day-add-input{ width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--rule); border-radius:8px; background:#FBFAF6; color:var(--ink); }
+  .cl-day-add-input:focus{ outline:none; border-color:var(--seal); background:#fff; }
+  .cl-day-add-input::placeholder{ color:var(--ink-soft); }
   .cl-item-row{ display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px dashed var(--rule); font-size:13px; cursor:pointer; }
   .cl-item-row:last-child{ border-bottom:none; }
   .cl-item-row.done .cl-item-text{ text-decoration:line-through; color:var(--ink-soft); }
@@ -2858,40 +2864,72 @@ document.getElementById('clCalPrev').onclick = ()=>{ clCurrentMonth = shiftMonth
 document.getElementById('clCalNext').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,1); materializeTemplatesForMonth(clCurrentMonth); renderChecklistCalendar(); };
 
 /* ---- Daily list view ---- */
+let clDailyFocusDate = null;   // 항목 추가 후 다시 포커스를 줄 날짜(재렌더 대비)
 function renderDailyChecklistView(){
   const wrap = document.getElementById('clDailyList');
   if(!wrap || !currentUser) return;
   const [yyyy, mm] = clCurrentMonth.split('-').map(Number);
   document.getElementById('clDailyLabel').textContent = `${yyyy}년 ${mm}월`;
   if(!document.getElementById('clDailyDateInput').value) document.getElementById('clDailyDateInput').value = todayStr();
-  const items = dailyChecklistForMonth(clCurrentMonth);
-  if(!items.length){ wrap.innerHTML = '<div class="acct-row">이 달에 등록된 일별 체크리스트가 없습니다.</div>'; return; }
-  const byDate = {};
-  items.forEach(it=>{ (byDate[it.date]=byDate[it.date]||[]).push(it); });
-  const dates = Object.keys(byDate).sort();
-  wrap.innerHTML = dates.map(d=>{
-    const {day, wd} = fmtLabel(d);
-    const rows = byDate[d].slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(it=>`
+  const daysInMonth = new Date(yyyy, mm, 0).getDate();
+  const todayS = todayStr();
+  const byDay = {};
+  dailyChecklistForMonth(clCurrentMonth).forEach(it=>{
+    const d = parseInt(it.date.slice(8,10),10);
+    (byDay[d]=byDay[d]||[]).push(it);
+  });
+  let html = '';
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${clCurrentMonth}-${String(d).padStart(2,'0')}`;
+    const wd = WEEKDAYS[new Date(yyyy, mm-1, d).getDay()];
+    const isToday = dateStr === todayS;
+    const rows = (byDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0)).map(it=>`
       <div class="cl-item-row ${it.done?'done':''}" data-id="${it.id}">
         <span class="cl-item-text">${escapeHtml(it.text)}</span>
         ${it.done ? `<span class="cl-item-meta">완료 ${escapeHtml(it.completedAt||'')}</span>` : ''}
         <button class="cl-item-del" data-id="${it.id}">삭제</button>
       </div>`).join('');
-    return `<div class="cl-day-block"><div class="cl-day-head">${day}일 ${wd}요일</div>${rows}</div>`;
-  }).join('');
+    html += `<div class="cl-day-block${isToday?' today':''}">
+      <div class="cl-day-head">${d}일 ${wd}요일${isToday?' <span class="cl-today-tag">오늘</span>':''}</div>
+      ${rows}
+      <div class="cl-day-add"><input type="text" class="cl-day-add-input" data-date="${dateStr}" placeholder="+ 할 일을 입력하고 Enter"></div>
+    </div>`;
+  }
+  wrap.innerHTML = html;
+  if(clDailyFocusDate){
+    const inp = wrap.querySelector('.cl-day-add-input[data-date="'+clDailyFocusDate+'"]');
+    if(inp){ inp.focus(); }
+    clDailyFocusDate = null;
+  }
+}
+async function addOneOffDailyItem(date, text){
+  await DAILY_CL.add({
+    ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+    date, text, category:'', done:false, completedAt:'', templateId:null, seq: Date.now()
+  });
+  logAction('일별 할일 추가', text);
 }
 document.getElementById('clDailyList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.cl-item-del');
   if(delBtn){
     const it = allDailyChecklist.find(x=>x.id===delBtn.dataset.id);
     if(it && it.templateId){
-      // 반복 항목 → 매달 반복 중단 + 다른 달 항목까지 함께 삭제
-      if(!await customConfirm('이 반복 항목을 삭제할까요? 매달 반복이 중단되고 다른 달의 같은 항목도 함께 사라져요.')) return;
+      // 반복 항목: 템플릿이 아직 살아있으면 반복 중단(다른 달 같은 항목도 정리), 이미 없어진(고아) 항목이면 그 항목만 삭제
+      const tplExists = checklistTemplates.some(t=>t.id===it.templateId);
+      const msg = tplExists
+        ? '이 반복 항목을 삭제할까요? 매달 반복이 중단되고 다른 달의 같은 항목도 함께 사라져요.'
+        : '이 항목을 삭제할까요?';
+      if(!await customConfirm(msg)) return;
       try{
-        const batch = db.batch();
-        allDailyChecklist.filter(x=>x.templateId===it.templateId).forEach(x=> batch.delete(DAILY_CL.doc(x.id)));
-        batch.delete(CL_TEMPLATES.doc(it.templateId));
-        await batch.commit();
+        const sibs = allDailyChecklist.filter(x=>x.templateId===it.templateId);
+        // 내 소유의 일별 항목들만 배치 삭제(존재하는 문서라 규칙 통과) → 권한오류 없음
+        for(let i=0;i<sibs.length;i+=400){
+          const batch = db.batch();
+          sibs.slice(i,i+400).forEach(x=> batch.delete(DAILY_CL.doc(x.id)));
+          await batch.commit();
+        }
+        // 템플릿은 살아있을 때만 별도로 삭제(없는 문서를 지우려 하면 권한오류가 나므로 분리)
+        if(tplExists){ try{ await CL_TEMPLATES.doc(it.templateId).delete(); }catch(e){} }
       }catch(err){ alert('삭제 실패: '+err.message); }
       return;
     }
@@ -2901,6 +2939,20 @@ document.getElementById('clDailyList').addEventListener('click', async (e)=>{
   }
   const row = e.target.closest('.cl-item-row');
   if(row) toggleDailyItemDone(row.dataset.id);
+});
+// 날짜별 한 줄 입력칸: Enter로 그 날짜에 단발성 할일 추가
+document.getElementById('clDailyList').addEventListener('keydown', async (e)=>{
+  const inp = e.target.closest('.cl-day-add-input');
+  if(!inp || e.key !== 'Enter') return;
+  e.preventDefault();
+  const text = inp.value.trim();
+  const date = inp.dataset.date;
+  if(!text || !date) return;
+  inp.disabled = true;
+  clDailyFocusDate = date;   // 재렌더 후 같은 칸에 다시 포커스
+  try{ await addOneOffDailyItem(date, text); inp.value=''; }
+  catch(err){ alert('추가 실패: '+err.message); clDailyFocusDate=null; }
+  inp.disabled = false;
 });
 document.getElementById('clDailyAddBtn').onclick = async ()=>{
   const date = document.getElementById('clDailyDateInput').value;
