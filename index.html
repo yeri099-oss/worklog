@@ -429,6 +429,18 @@
   .dash-pill.dragging{ opacity:.3; }
   .del-btn{ margin-left:auto; font-size:11px; color:var(--seal); background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:4px 10px; cursor:pointer; font-family:inherit; }
 
+  /* ===== Dashboard: 화면 전체 폭으로 펼치기 (대시보드 탭일 때만) ===== */
+  body.dash-full{ overflow-x:hidden; }
+  body.dash-full .dash-grid-scroll{
+    width:100vw;
+    margin-left:calc(50% - 50vw);
+    padding-left:8px; padding-right:8px;
+    box-sizing:border-box;
+  }
+  body.dash-full .dash-grid{
+    min-width:0;
+  }
+
   /* ===== Mobile ===== */
   @media (max-width: 640px){
     .drag-handle{ display:none !important; }
@@ -2268,6 +2280,7 @@ function switchTab(name){
   document.getElementById('tabBtnChecklist').classList.toggle('active', name==='checklist');
   document.getElementById('tabBtnDashboard').classList.toggle('active', name==='dashboard');
   document.getElementById('tabBtnSettings').classList.toggle('active', name==='settings');
+  document.body.classList.toggle('dash-full', name==='dashboard');
   if(name==='worklog') syncAllDayColumns();
   if(name==='checklist') renderChecklistCalendar();
   if(name==='dashboard') renderDashboard();
