@@ -729,7 +729,7 @@
   </div>
 
   <div id="clView-daily" class="cl-view" style="display:none;">
-    <p class="cl-hint">날짜를 누르면 그 날짜에 할 일을 적을 수 있어요.</p>
+    <p class="cl-hint">날짜를 누르면 그 날짜에 <b>매달 반복할 일</b>을 적을 수 있어요. (단발성 할 일은 '할일' 탭에 적으세요)</p>
     <div class="month-select-wrap" style="margin:8px 0 10px;">
       <button class="arrow" id="clDailyPrev">‹</button>
       <span id="clDailyLabel" class="serif" style="font-size:16px; font-weight:700; margin:0 10px;"></span>
@@ -2909,7 +2909,7 @@ function renderDailyChecklistView(){
     html += `<div class="cl-day-block${isToday?' today':''}${open?' open':''}" data-date="${dateStr}">
       <div class="cl-day-head"><span class="cl-day-title">${d}일 ${wd}요일${isToday?' <span class="cl-today-tag">오늘</span>':''}</span><span class="cl-add-hint">${open?'닫기':'+ 추가'}</span></div>
       ${rows}
-      <div class="cl-day-add" style="display:${open?'block':'none'}"><input type="text" class="cl-day-add-input" data-date="${dateStr}" placeholder="+ 할 일을 입력하고 Enter"></div>
+      <div class="cl-day-add" style="display:${open?'block':'none'}"><input type="text" class="cl-day-add-input" data-date="${dateStr}" placeholder="+ 매달 이 날짜에 반복할 일 입력 후 Enter"></div>
     </div>`;
   }
   wrap.innerHTML = html;
@@ -2919,12 +2919,21 @@ function renderDailyChecklistView(){
     clDailyFocusDate = null;
   }
 }
-async function addOneOffDailyItem(date, text){
-  await DAILY_CL.add({
+async function addDailyRoutine(date, text){
+  // 일별루틴 = 매달 이 날짜에 자동 반복 (반복 엔진의 monthly 템플릿으로 저장)
+  const dayNum = parseInt(date.slice(8,10), 10);
+  const ym = date.slice(0,7);
+  const ref = await CL_TEMPLATES.add({ ownerUid: currentUser.uid, text, category:'', recurrence:'monthly', day: dayNum, lastMaterializedMonth:'' });
+  const yyyy = parseInt(ym.slice(0,4),10), mm = parseInt(ym.slice(5,7),10);
+  const dim = new Date(yyyy, mm, 0).getDate();
+  const d = Math.min(Math.max(dayNum,1), dim);
+  await DAILY_CL.doc('tpl_' + ref.id + '_' + ym).set({
     ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-    date, text, category:'', done:false, completedAt:'', templateId:null, seq: Date.now()
+    date: `${ym}-${String(d).padStart(2,'0')}`, text, category:'',
+    done:false, completedAt:'', templateId: ref.id, seq: Date.now()
   });
-  logAction('일별 할일 추가', text);
+  await CL_TEMPLATES.doc(ref.id).update({ lastMaterializedMonth: ym });
+  logAction('일별 반복 추가', text);
 }
 document.getElementById('clDailyList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.cl-item-del');
@@ -2978,7 +2987,7 @@ document.getElementById('clDailyList').addEventListener('keydown', async (e)=>{
   if(!text || !date) return;
   inp.disabled = true;
   clDailyFocusDate = date;   // 재렌더 후 같은 칸에 다시 포커스
-  try{ await addOneOffDailyItem(date, text); inp.value=''; }
+  try{ await addDailyRoutine(date, text); inp.value=''; }
   catch(err){ alert('추가 실패: '+err.message); clDailyFocusDate=null; }
   inp.disabled = false;
 });
@@ -3333,9 +3342,8 @@ function openDashAddModal(date){
   setTimeout(()=>{ const t=document.getElementById('dashTextInput'); if(t) t.focus(); }, 30);
 }
 function closeDashAddModal(){ document.getElementById('dashAddModal').classList.remove('show'); }
+// 창은 오직 ✕(닫기) 또는 "대시보드에 추가" 버튼으로만 닫힘. 바깥 클릭/드래그/Esc로는 닫히지 않음.
 document.getElementById('dashModalClose').onclick = closeDashAddModal;
-document.getElementById('dashAddModal').addEventListener('click', (e)=>{ if(e.target.id === 'dashAddModal') closeDashAddModal(); });
-document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeDashAddModal(); });
 
 document.getElementById('dashAddBtn').onclick = async ()=>{
   const date = document.getElementById('dashDateInput').value;
