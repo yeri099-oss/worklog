@@ -209,6 +209,13 @@
     font-size:10.5px; font-weight:600; white-space:normal; word-break:break-word; overflow-wrap:anywhere;
     color:var(--ink-soft); background:transparent;
   }
+  .entry .dash-check{ flex:none; width:38px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-left:1.5px solid var(--rule-strong); cursor:pointer; }
+  .entry .dash-check input{ margin:0; cursor:pointer; width:15px; height:15px; accent-color:var(--seal); }
+  .entry .dash-check-cap{ font-size:9px; color:var(--ink-soft); }
+  .dash-check-label{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink); margin:6px 2px 0; cursor:pointer; }
+  .dash-check-label input{ width:16px; height:16px; accent-color:var(--seal); cursor:pointer; }
+  /* 대시보드에서 업무일지 체크 항목이 축약돼 뜨는 알약 */
+  .dash-logpill{ font-size:10.5px; padding:2px 6px; border-radius:6px; background:#fff; color:var(--ink); border:1.5px solid var(--seal); font-weight:600; white-space:normal; word-break:break-word; line-height:1.3; }
   .entry .note-col.done{ background:var(--slate); color:#fff; }
   .entry .note-col.progress{ background:var(--seal); color:#fff; }
   .entry .note-col.wait{ background:var(--yellow); color:var(--ink); }
@@ -288,6 +295,7 @@
   @keyframes pop{ from{ transform:scale(.94); opacity:0;} to{ transform:scale(1); opacity:1;} }
   .sheet h3{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-size:16px; margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;}
   .sheet h3 .x{ font-size:13px; color:var(--ink-soft); font-weight:400; cursor:pointer; }
+  #editClose{ color:#111418; font-weight:800; }
   .sheet .row-btns{ display:flex; gap:8px; margin-top:14px; }
   .sheet .row-btns button{ flex:1; padding:11px; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; border:1px solid var(--rule-strong); background:transparent; color:var(--ink);}
   .sheet .row-btns button.primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
@@ -720,10 +728,16 @@
   </div>
 
   <div id="clView-calendar" class="cl-view">
-    <div class="month-select-wrap" style="margin-bottom:12px;">
-      <button class="arrow" id="clCalPrev">‹</button>
-      <span id="clCalLabel" class="serif" style="font-size:17px; font-weight:700; margin:0 10px;"></span>
-      <button class="arrow" id="clCalNext">›</button>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;">
+      <div class="month-select-wrap">
+        <button class="arrow" id="clCalPrev">‹</button>
+        <span id="clCalLabel" class="serif" style="font-size:17px; font-weight:700; margin:0 10px;"></span>
+        <button class="arrow" id="clCalNext">›</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <div class="report-btn" id="clExcelBtn">📊 엑셀</div>
+        <div class="report-btn" id="clImageBtn">🖼️ 이미지</div>
+      </div>
     </div>
     <div class="cl-calendar-grid" id="clCalendarGrid"></div>
   </div>
@@ -863,6 +877,8 @@
 <div class="overlay center-modal" id="editOverlay">
   <div class="sheet">
     <h3>업무일지 수정 <span class="x" id="editClose">닫기 ✕</span></h3>
+    <label class="field-label">날짜</label>
+    <div class="field"><input type="date" id="editDate"></div>
     <label class="field-label">구분</label>
     <div class="field"><textarea id="editCat" rows="1" placeholder="줄바꿈은 Enter"></textarea></div>
     <label class="field-label">내용</label>
@@ -878,6 +894,7 @@
     <div class="field"><input type="text" id="editNote"></div>
     <label class="field-label">기준일 (선택, 디데이 표시)</label>
     <div class="field"><input type="date" id="editDueDate"></div>
+    <label class="dash-check-label"><input type="checkbox" id="editOnDash"> 대시보드에 표시 (같은 날짜에 구분이 축약돼서 떠요)</label>
     <div class="row-btns">
       <button class="danger" id="editDelete">삭제</button>
       <button class="primary" id="editSave">저장</button>
@@ -961,6 +978,9 @@
 </div>
 
 <div class="copied-toast" id="copiedToast">복사되었습니다 ✓</div>
+
+<!-- 체크리스트 이미지 캡처용(화면 밖 숨김) -->
+<div id="clCapture" style="position:fixed; left:-99999px; top:0; width:900px; background:#fff; padding:24px; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Malgun Gothic',sans-serif; color:#1F2328;"></div>
 
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1680,6 +1700,7 @@ function renderList(){
           <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line"><span class="content-main">${escapeHtml(e.content)}</span>${inspLine}</span>
           <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
+          <label class="dash-check" title="체크하면 대시보드 같은 날짜에 구분이 떠요"><input type="checkbox" class="dash-check-box" data-id="${e.id}" ${e.onDash?'checked':''}><span class="dash-check-cap">대시</span></label>
         </div>`;
     }
 
@@ -1709,9 +1730,8 @@ function renderList(){
     return `
       <div class="day-group">
         <div class="day-head">
-          <span class="num serif">${day}</span>
+          <span class="num serif">${month}월 ${day}일</span>
           <span class="wd">${wd}요일</span>
-          <span class="ym">${month}월</span>
         </div>
         <div class="day-entries" data-date="${dateStr}">
           ${rowsHtml}
@@ -1810,9 +1830,18 @@ updateMonthBtnLabel();
 
 document.getElementById('listWrap').addEventListener('click', (e)=>{
   if(e.target.closest('.drag-handle')) return;
+  if(e.target.closest('.dash-check')) return;   // 대시보드 체크칸 클릭은 수정창을 열지 않음
   const row = e.target.closest('.entry');
   if(!row) return;
   openEdit(row.dataset.id);
+});
+// 업무일지 대시보드 체크칸 → 체크 시 대시보드 같은 날짜에 구분이 뜨도록 (onDash 저장)
+document.getElementById('listWrap').addEventListener('change', async (e)=>{
+  const box = e.target.closest('.dash-check-box');
+  if(!box) return;
+  const id = box.dataset.id;
+  try{ await ENTRIES.doc(id).update({ onDash: box.checked }); logAction('대시보드 표시', box.checked?'ON':'OFF'); }
+  catch(err){ alert('변경 실패: ' + err.message); box.checked = !box.checked; }
 });
 
 /* ============ Drag to reorder (mouse) ============ */
@@ -1876,6 +1905,8 @@ function openEdit(id){
   const e = allEntries.find(x=>x.id===id);
   if(!e) return;
   editingId = id;
+  document.getElementById('editDate').value = e.date || '';
+  document.getElementById('editOnDash').checked = !!e.onDash;
   document.getElementById('editCat').value = e.category;
   autoGrowCat(document.getElementById('editCat'));
   document.getElementById('editContent').value = e.content;
@@ -1896,9 +1927,12 @@ document.getElementById('editSave').onclick = async ()=>{
   const inspection = document.getElementById('editInspection').value.trim();
   const note = document.getElementById('editNote').value.trim();
   const dueDate = document.getElementById('editDueDate').value || '';
+  const date = document.getElementById('editDate').value || '';
+  const onDash = document.getElementById('editOnDash').checked;
   if(!cat || !content){ alert('구분과 내용을 입력해주세요.'); return; }
+  if(!date){ alert('날짜를 입력해주세요.'); return; }
   try{
-    await ENTRIES.doc(editingId).update({ category: cat, content, inspection, note, dueDate });
+    await ENTRIES.doc(editingId).update({ category: cat, content, inspection, note, dueDate, date, onDash });
     logAction('업무일지 수정', cat);
     rememberCategory(cat);
     document.getElementById('editOverlay').classList.remove('open');
@@ -2879,6 +2913,147 @@ document.getElementById('clCalendarGrid').addEventListener('drop', async (e)=>{
 document.getElementById('clCalPrev').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,-1); materializeTemplatesForMonth(clCurrentMonth); renderChecklistCalendar(); };
 document.getElementById('clCalNext').onclick = ()=>{ clCurrentMonth = shiftMonth(clCurrentMonth,1); materializeTemplatesForMonth(clCurrentMonth); renderChecklistCalendar(); };
 
+/* ---- 체크리스트 내보내기 (달력 + 월별 루틴 요약) ---- */
+// 이 달의 주(week) 배열 만들기: 각 칸 = {d, items[]} 또는 null
+function clBuildWeeks(){
+  const [yyyy, mm] = clCurrentMonth.split('-').map(Number);
+  const daysInMonth = new Date(yyyy, mm, 0).getDate();
+  const firstDow = new Date(yyyy, mm-1, 1).getDay();
+  const itemsByDay = {};
+  dailyChecklistForMonth(clCurrentMonth).forEach(it=>{
+    const d = parseInt(it.date.slice(8,10),10);
+    (itemsByDay[d] = itemsByDay[d]||[]).push(it);
+  });
+  const weeks = []; let week = new Array(7).fill(null); let dow = firstDow;
+  for(let d=1; d<=daysInMonth; d++){
+    week[dow] = { d, items: (itemsByDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0)) };
+    dow++;
+    if(dow===7){ weeks.push(week); week = new Array(7).fill(null); dow = 0; }
+  }
+  if(week.some(x=>x)) weeks.push(week);
+  return { yyyy, mm, weeks };
+}
+// 월별 루틴(매년 그 달 반복) 요약 목록
+function clRoutineSummary(){
+  return allMonthlyChecklist.filter(it=>it.everyMonth).map(it=>({
+    m: parseInt((it.startMonth||'').slice(5,7),10) || 0, text: it.text, seq: it.seq||0
+  })).sort((a,b)=> a.m-b.m || a.seq-b.seq);
+}
+
+document.getElementById('clExcelBtn').onclick = ()=>{
+  if(typeof XLSX === 'undefined' || !XLSX.utils){ alert('엑셀 기능을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+  try{
+    const { yyyy, mm, weeks } = clBuildWeeks();
+    const aoa = [];
+    aoa.push([`${yyyy}년 ${mm}월 체크리스트`, '', '', '', '', '', '']);
+    aoa.push(WEEKDAYS.slice());
+    const calStartRow = aoa.length;   // 첫 주 행 인덱스
+    weeks.forEach(wk=>{
+      aoa.push(wk.map(cell=>{
+        if(!cell) return '';
+        const lines = cell.items.map(it=> (it.done?'✓ ':'') + it.text);
+        return String(cell.d) + (lines.length ? '\n' + lines.join('\n') : '');
+      }));
+    });
+    const calEndRow = aoa.length - 1;
+    aoa.push(['']);
+    aoa.push(['[월별 루틴]  매년 그 달에 반복', '', '', '', '', '', '']);
+    const routineStart = aoa.length;
+    clRoutineSummary().forEach(r=> aoa.push([`매년 ${r.m}월`, r.text, '', '', '', '', '']));
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = Array.from({length:7}, ()=>({wch:16}));
+    ws['!merges'] = [ {s:{r:0,c:0},e:{r:0,c:6}} ];
+    ws['!rows'] = aoa.map((r,i)=>{
+      if(i===0) return {hpt:26};
+      if(i>=calStartRow && i<=calEndRow) return {hpt:64};
+      return {hpt:18};
+    });
+    const thin = {style:'thin', color:{rgb:'CBD2D9'}};
+    const border = {top:thin,bottom:thin,left:thin,right:thin};
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for(let R=range.s.r; R<=range.e.r; R++){
+      for(let C=range.s.c; C<=range.e.c; C++){
+        const addr = XLSX.utils.encode_cell({r:R,c:C});
+        const cell = ws[addr] || (ws[addr] = {t:'s', v:''});
+        let fill = {fgColor:{rgb:'FFFFFF'}};
+        let font = {name:'맑은 고딕', sz:10, color:{rgb:'1F2328'}};
+        let align = {vertical:'top', horizontal:'left', wrapText:true};
+        if(R===0){ fill={fgColor:{rgb:'1F2328'}}; font={name:'맑은 고딕', sz:13, bold:true, color:{rgb:'FFFFFF'}}; align={vertical:'center', horizontal:'center'}; }
+        else if(R===1){ // 요일 헤더
+          const wdColor = C===0 ? 'DC2626' : (C===6 ? '2563EB' : 'FFFFFF');
+          fill={fgColor:{rgb:'EFEDE6'}}; font={name:'맑은 고딕', sz:11, bold:true, color:{rgb: C===0?'DC2626': (C===6?'2563EB':'1F2328')}}; align={vertical:'center', horizontal:'center'};
+        }
+        else if(R>=calStartRow && R<=calEndRow){ align={vertical:'top', horizontal:'left', wrapText:true}; font={name:'맑은 고딕', sz:9.5, color:{rgb:'1F2328'}}; }
+        else { border.top=undefined; }
+        cell.s = { fill, font, alignment:align, border:{top:thin,bottom:thin,left:thin,right:thin} };
+      }
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `${mm}월`);
+    XLSX.writeFile(wb, `체크리스트_${clCurrentMonth}.xlsx`);
+    logAction('체크리스트 엑셀 내보내기', clCurrentMonth);
+  }catch(err){ alert('엑셀 생성 실패: ' + err.message); }
+};
+
+// 이미지 캡처용 HTML 만들기 (달력 + 루틴 요약)
+function clBuildCaptureHTML(){
+  const { yyyy, mm, weeks } = clBuildWeeks();
+  const todayS = todayStr();
+  let cal = '<table style="width:100%; border-collapse:collapse; table-layout:fixed;">';
+  cal += '<tr>' + WEEKDAYS.map((w,i)=>{
+    const c = i===0?'#DC2626':(i===6?'#2563EB':'#1F2328');
+    return `<th style="border:1px solid #CBD2D9; background:#EFEDE6; color:${c}; font-size:13px; padding:6px; width:14.28%;">${w}</th>`;
+  }).join('') + '</tr>';
+  weeks.forEach(wk=>{
+    cal += '<tr>' + wk.map(cell=>{
+      if(!cell) return '<td style="border:1px solid #E5E7EB; background:#FAF9F6; height:78px; vertical-align:top;"></td>';
+      const isToday = `${clCurrentMonth}-${String(cell.d).padStart(2,'0')}` === todayS;
+      const items = cell.items.map(it=>`<div style="font-size:11px; line-height:1.4; ${it.done?'color:#9AA3AD; text-decoration:line-through;':'color:#1F2328;'}">${it.done?'✓ ':'• '}${escapeHtml(it.text)}</div>`).join('');
+      return `<td style="border:1px solid #E5E7EB; height:78px; vertical-align:top; padding:4px 5px; ${isToday?'box-shadow:inset 0 0 0 2px #2563EB;':''}">
+        <div style="font-size:12px; font-weight:800; margin-bottom:2px;">${cell.d}</div>${items}</td>`;
+    }).join('') + '</tr>';
+  });
+  cal += '</table>';
+  const routines = clRoutineSummary();
+  let routineHtml = '';
+  if(routines.length){
+    routineHtml = `<div style="margin-top:18px;">
+      <div style="font-size:14px; font-weight:800; margin-bottom:8px; padding-bottom:5px; border-bottom:2px solid #1F2328;">월별 루틴 <span style="font-size:11px; font-weight:500; color:#6B7280;">(매년 그 달에 반복)</span></div>
+      ${routines.map(r=>`<div style="font-size:12.5px; padding:3px 0; border-bottom:1px dashed #E5E7EB;"><span style="display:inline-block; min-width:56px; color:#2563EB; font-weight:700;">매년 ${r.m}월</span> ${escapeHtml(r.text)}</div>`).join('')}
+    </div>`;
+  }
+  return `<div style="font-size:20px; font-weight:800; margin-bottom:14px;">${yyyy}년 ${mm}월 체크리스트</div>${cal}${routineHtml}`;
+}
+
+document.getElementById('clImageBtn').onclick = async ()=>{
+  const btn = document.getElementById('clImageBtn');
+  const orig = btn.textContent;
+  if(typeof html2canvas === 'undefined'){ alert('이미지 기능을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+  btn.textContent = '이미지 생성 중…';
+  const target = document.getElementById('clCapture');
+  target.innerHTML = clBuildCaptureHTML();
+  try{
+    const canvas = await html2canvas(target, {backgroundColor:'#FFFFFF', scale:2});
+    let copied = false;
+    if(navigator.clipboard && window.ClipboardItem){
+      try{
+        const blob = await new Promise(res=>canvas.toBlob(res, 'image/png'));
+        if(blob){ await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); copied = true; }
+      }catch(e){}
+    }
+    if(copied){ showToast('이미지가 복사되었습니다 ✓'); }
+    else {
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png'); a.download = `체크리스트_${clCurrentMonth}.png`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      showToast('이미지로 저장했습니다');
+    }
+    logAction('체크리스트 이미지 내보내기', clCurrentMonth);
+  }catch(err){ alert('이미지 생성 실패: ' + err.message); }
+  finally{ btn.textContent = orig; target.innerHTML = ''; }
+};
+
 /* ---- Daily list view ---- */
 let clDailyFocusDate = null;   // 항목 추가 후 다시 포커스를 줄 날짜(재렌더 대비)
 let clDailyOpen = new Set();    // 입력칸이 열려 있는 날짜들
@@ -3219,6 +3394,15 @@ function renderDashboard(){
     });
   });
 
+  // 업무일지에서 '대시보드에 표시' 체크한 항목 → 날짜별로 구분(카테고리)만 축약해서 모음
+  const logByDate = {};
+  (typeof allEntries !== 'undefined' ? allEntries : []).forEach(en=>{
+    if(!en.onDash || !en.date) return;
+    if(en.date.slice(0,4) !== String(dashCurrentYear)) return;
+    const cat = (en.category || '').split('\n')[0].trim() || (en.content||'').slice(0,10);
+    (logByDate[en.date] = logByDate[en.date] || []).push(cat);
+  });
+
   // 각 월의 일수 미리 계산
   const daysInMonth = [];
   for(let m=1; m<=12; m++){ daysInMonth[m] = new Date(dashCurrentYear, m, 0).getDate(); }
@@ -3249,7 +3433,12 @@ function renderDashboard(){
         else { cls += ' span-cont' + (it.role === 'end' ? ' span-end' : ''); styleAttr = `background:#${col.fg}`; }
         return `<span class="${cls}" style="${styleAttr}" draggable="false" data-id="${it.e.id}" data-inst="${it.inst}" data-start="${it.start}" data-end="${it.end}" title="${title}">${inner}</span>`;
       }).join('');
-      html += `<div class="dash-day-cell${markCls}" data-date="${dateStr}">${pills}</div>`;
+      // 업무일지 체크 항목(구분만) 축약 표시 — 드래그/삭제 불가, 클릭해도 추가창 안 열림
+      const logPills = (logByDate[dateStr] || []).map(cat=>{
+        const col = dashCatColor(cat);
+        return `<span class="dash-logpill" style="border-color:#${col.fg};color:#${col.fg}" title="${escapeAttr('업무일지: '+cat)}">${escapeHtml(cat)}</span>`;
+      }).join('');
+      html += `<div class="dash-day-cell${markCls}" data-date="${dateStr}">${pills}${logPills}</div>`;
     }
   }
   grid.innerHTML = html;
@@ -3383,7 +3572,7 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
   // 빈 날짜 칸 클릭 → 그 날짜로 "일정 추가" 창 열기 (알약(일정) 클릭은 삭제 로직이 처리)
   gridEl.addEventListener('click', (e)=>{
     if(justDragged){ justDragged = false; return; }
-    if(e.target.closest('.dash-pill')) return;
+    if(e.target.closest('.dash-pill') || e.target.closest('.dash-logpill')) return;
     const cell = e.target.closest('.dash-day-cell[data-date]');
     if(cell) openDashAddModal(cell.dataset.date);
   });
