@@ -949,11 +949,11 @@
 <div class="overlay center-modal" id="recurringOverlay">
   <div class="sheet">
     <h3>반복업무 관리 <span class="x" id="recurringClose">닫기 ✕</span></h3>
-    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">"출근 · 반복업무 추가"를 누르면 여기 등록된 목록이 오늘 날짜로 한 번에 추가돼요. 내용에 <code>{어제}</code>라고 적으면 어제 날짜(MM/DD)로 자동 치환됩니다.</p>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 12px;">"출근 · 반복업무 추가"를 누르면 여기 등록된 목록이 오늘 날짜로 한 번에 추가돼요. <b>구분만 넣고 내용은 비워두면</b>, 매일 그 구분만 자동으로 올라오고 내용은 직접 채우면 돼요. 내용에 <code>{어제}</code>라고 적으면 어제 날짜(MM/DD)로 자동 치환됩니다.</p>
     <div id="recurringList"></div>
     <div class="add-acct-form">
       <input type="text" id="recurCatInput" placeholder="구분 (예: 리뷰현황)">
-      <input type="text" id="recurContentInput" placeholder="내용 (예: ~{어제} 리뷰현황 확인)">
+      <input type="text" id="recurContentInput" placeholder="내용 (선택 — 비워두면 매일 직접 입력)">
       <div class="role-toggle" id="recurNoteRole">
         <div class="chip active" data-v="완료">완료</div>
         <div class="chip" data-v="진행중">진행중</div>
@@ -1179,7 +1179,7 @@ document.getElementById('recurNoteRole').addEventListener('click', (e)=>{
 document.getElementById('recurAddBtn').onclick = ()=>{
   const cat = document.getElementById('recurCatInput').value.trim();
   const content = document.getElementById('recurContentInput').value.trim();
-  if(!cat || !content){ alert('구분과 내용을 입력해주세요.'); return; }
+  if(!cat){ alert('구분을 입력해주세요.'); return; }   // 내용은 선택 — 비워두면 매일 직접 입력
   recurringTasks = [...recurringTasks, { category: cat, content, note: recurNoteVal }];
   saveRecurringTasks();
   logAction('반복업무 추가', cat);
