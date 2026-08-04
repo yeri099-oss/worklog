@@ -281,6 +281,8 @@
     display:none; align-items:flex-end; justify-content:center;
   }
   .overlay.open{ display:flex; }
+  /* 확인창(예/아니오)은 항상 다른 창(대시보드 수정창 등)보다 위에 뜨게 */
+  #confirmOverlay{ z-index:3000; }
   .sheet{
     width:100%; max-width:640px; background:var(--paper-raised);
     border-radius:18px 18px 0 0; padding:18px 18px calc(18px + env(safe-area-inset-bottom));
@@ -3606,14 +3608,15 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
   }catch(err){ alert('저장 실패: ' + err.message); }
 };
 document.getElementById('dashDeleteBtn').onclick = async ()=>{
-  if(!dashEditingId) return;
+  const id = dashEditingId;   // await 이전에 id를 확보 (도중에 값이 바뀌어도 안전)
+  if(!id){ closeDashAddModal(); return; }
+  const ev = allDashboardEvents.find(x=>x.id===id);
   if(!await customConfirm('이 일정을 대시보드에서 삭제할까요?')) return;
-  const ev = allDashboardEvents.find(x=>x.id===dashEditingId);
   try{
-    await DASHBOARD.doc(dashEditingId).delete();
+    await DASHBOARD.doc(id).delete();
     // 업무일지에서 온 복사본이면, 업무일지의 '대시' 체크도 해제(다시 자동 생성되지 않도록)
     if(ev && ev.fromEntry){ try{ await ENTRIES.doc(ev.fromEntry).update({ onDash:false }); }catch(e){} }
-    logAction('대시보드 일정 삭제', ev ? (ev.text||'') : dashEditingId);
+    logAction('대시보드 일정 삭제', ev ? (ev.text||'') : id);
     closeDashAddModal();
   }catch(err){ alert('삭제 실패: ' + err.message); }
 };
