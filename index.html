@@ -511,6 +511,8 @@
   .dash-row-mark{ box-shadow: inset 0 -2px 0 0 var(--ink); }
   .dash-pill{ font-size:11px; padding:3px 7px; border-radius:7px; background:var(--seal-soft); color:var(--seal); cursor:grab; white-space:normal; word-break:break-word; line-height:1.35; font-weight:500; touch-action:none; -webkit-user-select:none; user-select:none; }
   .dash-pill.dragging{ opacity:.3; }
+  /* 업무일지에서 온 복사본: 흰 바탕 + 테두리(구분만 축약). 드래그·수정·삭제 가능 */
+  .dash-pill.dash-pill-log{ background:#fff; border:1.5px solid var(--seal); font-weight:600; }
   /* 여러 날(기간) 일정: 시작칸에 내용 표시, 이어지는 칸은 색 막대(세로로 연결되는 느낌) */
   .dash-pill.span-start{ border-bottom-left-radius:0; border-bottom-right-radius:0; }
   .dash-pill.span-cont{ background:var(--seal); color:transparent; min-height:14px; border-radius:0; }
@@ -830,6 +832,7 @@
       <label class="field-label">내용</label>
       <div class="field"><input type="text" id="dashTextInput" placeholder="예: 봄스페셜 시연"></div>
       <button class="add-btn" id="dashAddBtn">+ 대시보드에 추가</button>
+      <button id="dashDeleteBtn" style="display:none; width:100%; margin-top:8px; padding:11px; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; border:1px solid var(--seal); background:var(--seal-soft); color:var(--seal);">이 일정 삭제</button>
     </div>
   </div>
 </div>
@@ -1405,6 +1408,7 @@ function startEntriesSync(){
     updateCheckinBar();
     autoCarryOverUnfinished();
     renderTeamTodayStat();
+    reconcileEntryDashCopies();
   }, err=>{
     document.getElementById('listWrap').innerHTML = `<div class="empty-state"><p>불러오기에 실패했습니다.</p><p style="font-size:11px;">${escapeHtml(err.message)}</p></div>`;
   });
@@ -1840,7 +1844,11 @@ document.getElementById('listWrap').addEventListener('change', async (e)=>{
   const box = e.target.closest('.dash-check-box');
   if(!box) return;
   const id = box.dataset.id;
-  try{ await ENTRIES.doc(id).update({ onDash: box.checked }); logAction('대시보드 표시', box.checked?'ON':'OFF'); }
+  try{
+    await ENTRIES.doc(id).update({ onDash: box.checked });
+    if(!box.checked) await removeEntryDashCopy(id);   // 체크 해제 → 대시보드 복사본 제거 (체크 시엔 자동 생성됨)
+    logAction('대시보드 표시', box.checked?'ON':'OFF');
+  }
   catch(err){ alert('변경 실패: ' + err.message); box.checked = !box.checked; }
 });
 
@@ -1933,6 +1941,7 @@ document.getElementById('editSave').onclick = async ()=>{
   if(!date){ alert('날짜를 입력해주세요.'); return; }
   try{
     await ENTRIES.doc(editingId).update({ category: cat, content, inspection, note, dueDate, date, onDash });
+    if(!onDash) await removeEntryDashCopy(editingId);   // 대시 체크 해제 → 대시보드 복사본 제거
     logAction('업무일지 수정', cat);
     rememberCategory(cat);
     document.getElementById('editOverlay').classList.remove('open');
@@ -1944,6 +1953,7 @@ document.getElementById('editDelete').onclick = async ()=>{
   const e = allEntries.find(x=>x.id===editingId);
   try{
     await ENTRIES.doc(editingId).delete();
+    await removeEntryDashCopy(editingId);   // 업무일지 삭제 시 대시보드 복사본도 정리
     logAction('업무일지 삭제', e ? `${e.date} ${e.category}` : editingId);
     document.getElementById('editOverlay').classList.remove('open');
   }catch(err){ alert('삭제 실패: ' + err.message); }
@@ -3344,12 +3354,34 @@ function startDashboardSync(){
   if(unsubDashboard || !currentUser) return;
   unsubDashboard = DASHBOARD.where('ownerUid','==', currentUser.uid).onSnapshot(snap=>{
     allDashboardEvents = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    reconcileEntryDashCopies();
     renderDashboard();
   }, err=>{ console.error('대시보드 로드 실패', err); });
 }
 
 // 두 날짜(YYYY-MM-DD) 사이의 일수 차이 (b - a)
 function daysBetween(a, b){ return Math.round((parseDate(b) - parseDate(a)) / 86400000); }
+
+// 업무일지 '대시' 체크 항목 → 대시보드에 '독립 복사본'으로 반영.
+// 없는 것만 새로 만들어서, 대시보드에서 구분·내용 수정/드래그 이동/삭제를 자유롭게(업무일지엔 영향 없음).
+function reconcileEntryDashCopies(){
+  if(!currentUser || !Array.isArray(allEntries) || !Array.isArray(allDashboardEvents)) return;
+  const have = new Set(allDashboardEvents.filter(e=>e.fromEntry).map(e=>e.fromEntry));
+  allEntries.forEach(en=>{
+    if(en.ownerUid !== currentUser.uid) return;   // 내 것만 복사(관리자가 남의 것까지 만들지 않도록)
+    if(en.onDash && en.date && !have.has(en.id)){
+      DASHBOARD.doc('entry_'+en.id).set({
+        ownerUid: en.ownerUid, ownerName: en.ownerName || '',
+        date: en.date, endDate: en.date,
+        category: en.category || '', text: en.content || '',
+        seq: en.seq || Date.now(), fromEntry: en.id
+      }).catch(()=>{});
+    }
+  });
+}
+async function removeEntryDashCopy(entryId){
+  try{ await DASHBOARD.doc('entry_'+entryId).delete(); }catch(e){}
+}
 // 일정 하나를 기간(시작~종료)으로 펼침
 function dashExpand(e){
   const start = e.date;
@@ -3394,15 +3426,6 @@ function renderDashboard(){
     });
   });
 
-  // 업무일지에서 '대시보드에 표시' 체크한 항목 → 날짜별로 구분(카테고리)만 축약해서 모음
-  const logByDate = {};
-  (typeof allEntries !== 'undefined' ? allEntries : []).forEach(en=>{
-    if(!en.onDash || !en.date) return;
-    if(en.date.slice(0,4) !== String(dashCurrentYear)) return;
-    const cat = (en.category || '').split('\n')[0].trim() || (en.content||'').slice(0,10);
-    (logByDate[en.date] = logByDate[en.date] || []).push(cat);
-  });
-
   // 각 월의 일수 미리 계산
   const daysInMonth = [];
   for(let m=1; m<=12; m++){ daysInMonth[m] = new Date(dashCurrentYear, m, 0).getDate(); }
@@ -3424,21 +3447,18 @@ function renderDashboard(){
       const dateStr = `${dashCurrentYear}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const items = (cellItems[dateStr] || []).slice().sort((a,b)=>((a.e.seq||0)-(b.e.seq||0)));
       const pills = items.map(it=>{
+        const isLog = !!it.e.fromEntry;   // 업무일지에서 온 복사본 → 구분만 축약 표시
         const full = (it.e.category ? it.e.category + ': ' : '') + it.e.text;
-        const title = escapeAttr(full + (it.span>1 ? ` (${it.span}일간: ${it.start} ~ ${it.end})` : ''));
+        const disp = isLog ? ((it.e.category || '').split('\n')[0].trim() || it.e.text || '') : full;
+        const title = escapeAttr((isLog ? '업무일지 · ' : '') + full + (it.span>1 ? ` (${it.span}일간: ${it.start} ~ ${it.end})` : ''));
         const col = dashCatColor(it.e.category);
-        let cls = 'dash-pill', inner = '', styleAttr = '';
-        if(it.role === 'single'){ inner = escapeHtml(full); styleAttr = `background:#${col.bg};color:#${col.fg}`; }
-        else if(it.showLabel){ inner = escapeHtml(full); cls += (it.role === 'end') ? ' span-end' : ' span-start'; styleAttr = `background:#${col.bg};color:#${col.fg}`; }
+        let cls = 'dash-pill' + (isLog ? ' dash-pill-log' : ''), inner = '', styleAttr = '';
+        if(it.role === 'single'){ inner = escapeHtml(disp); styleAttr = isLog ? `border-color:#${col.fg};color:#${col.fg}` : `background:#${col.bg};color:#${col.fg}`; }
+        else if(it.showLabel){ inner = escapeHtml(disp); cls += (it.role === 'end') ? ' span-end' : ' span-start'; styleAttr = `background:#${col.bg};color:#${col.fg}`; }
         else { cls += ' span-cont' + (it.role === 'end' ? ' span-end' : ''); styleAttr = `background:#${col.fg}`; }
         return `<span class="${cls}" style="${styleAttr}" draggable="false" data-id="${it.e.id}" data-inst="${it.inst}" data-start="${it.start}" data-end="${it.end}" title="${title}">${inner}</span>`;
       }).join('');
-      // 업무일지 체크 항목(구분만) 축약 표시 — 드래그/삭제 불가, 클릭해도 추가창 안 열림
-      const logPills = (logByDate[dateStr] || []).map(cat=>{
-        const col = dashCatColor(cat);
-        return `<span class="dash-logpill" style="border-color:#${col.fg};color:#${col.fg}" title="${escapeAttr('업무일지: '+cat)}">${escapeHtml(cat)}</span>`;
-      }).join('');
-      html += `<div class="dash-day-cell${markCls}" data-date="${dateStr}">${pills}${logPills}</div>`;
+      html += `<div class="dash-day-cell${markCls}" data-date="${dateStr}">${pills}</div>`;
     }
   }
   grid.innerHTML = html;
@@ -3521,12 +3541,16 @@ document.getElementById('dashEndDateInput').addEventListener('change', dashUpdat
   if(el) el.addEventListener('click', ()=>{ try{ el.showPicker(); }catch(e){} });
 });
 
+let dashEditingId = null;       // 수정 중인 대시보드 일정 id (null이면 '추가' 모드)
 // 날짜 칸 클릭 → 가운데 "일정 추가" 창 열기 (클릭한 날짜를 시작일로 채움)
 function openDashAddModal(date){
+  dashEditingId = null;
   document.getElementById('dashDateInput').value = date || '';
   document.getElementById('dashEndDateInput').value = '';
   document.getElementById('dashCategoryInput').value = '';
   document.getElementById('dashTextInput').value = '';
+  document.getElementById('dashAddBtn').textContent = '+ 대시보드에 추가';
+  document.getElementById('dashDeleteBtn').style.display = 'none';
   dashUpdateSpanHint();
   const title = document.getElementById('dashModalTitle');
   if(title){
@@ -3536,8 +3560,23 @@ function openDashAddModal(date){
   document.getElementById('dashAddModal').classList.add('show');
   setTimeout(()=>{ const t=document.getElementById('dashTextInput'); if(t) t.focus(); }, 30);
 }
-function closeDashAddModal(){ document.getElementById('dashAddModal').classList.remove('show'); }
-// 창은 오직 ✕(닫기) 또는 "대시보드에 추가" 버튼으로만 닫힘. 바깥 클릭/드래그/Esc로는 닫히지 않음.
+// 대시보드 일정(알약) 클릭 → 수정창 열기 (구분·내용·기간 수정 / 삭제). 업무일지에서 온 것도 여기서만 수정됨.
+function openDashEditModal(ev){
+  dashEditingId = ev.id;
+  document.getElementById('dashDateInput').value = ev.date || '';
+  document.getElementById('dashEndDateInput').value = (ev.endDate && ev.endDate !== ev.date) ? ev.endDate : '';
+  document.getElementById('dashCategoryInput').value = ev.category || '';
+  document.getElementById('dashTextInput').value = ev.text || '';
+  document.getElementById('dashAddBtn').textContent = '저장';
+  document.getElementById('dashDeleteBtn').style.display = 'block';
+  dashUpdateSpanHint();
+  const title = document.getElementById('dashModalTitle');
+  if(title) title.textContent = ev.fromEntry ? '일정 수정 (대시보드에만 반영)' : '일정 수정';
+  document.getElementById('dashAddModal').classList.add('show');
+  setTimeout(()=>{ const t=document.getElementById('dashTextInput'); if(t){ t.focus(); } }, 30);
+}
+function closeDashAddModal(){ document.getElementById('dashAddModal').classList.remove('show'); dashEditingId = null; }
+// 창은 오직 ✕(닫기)·저장·추가·삭제 버튼으로만 닫힘. 바깥 클릭/드래그/Esc로는 닫히지 않음.
 document.getElementById('dashModalClose').onclick = closeDashAddModal;
 
 document.getElementById('dashAddBtn').onclick = async ()=>{
@@ -3548,17 +3587,35 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
   const text = document.getElementById('dashTextInput').value.trim();
   if(!date || !text){ alert('시작일과 내용을 입력해주세요.'); return; }
   try{
-    await DASHBOARD.add({
-      ownerUid: currentUser.uid, ownerName: currentUser.displayName,
-      date, endDate, category, text, seq: Date.now()
-    });
+    if(dashEditingId){
+      // 수정: 이 대시보드 일정만 바뀜(업무일지 원본은 그대로)
+      await DASHBOARD.doc(dashEditingId).update({ date, endDate, category, text });
+      logAction('대시보드 일정 수정', text);
+    } else {
+      await DASHBOARD.add({
+        ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+        date, endDate, category, text, seq: Date.now()
+      });
+      logAction('대시보드 일정 추가', text);
+    }
     document.getElementById('dashEndDateInput').value = '';
     document.getElementById('dashCategoryInput').value = '';
     document.getElementById('dashTextInput').value = '';
     dashUpdateSpanHint();
-    logAction('대시보드 일정 추가', text);
     closeDashAddModal();
-  }catch(err){ alert('추가 실패: ' + err.message); }
+  }catch(err){ alert('저장 실패: ' + err.message); }
+};
+document.getElementById('dashDeleteBtn').onclick = async ()=>{
+  if(!dashEditingId) return;
+  if(!await customConfirm('이 일정을 대시보드에서 삭제할까요?')) return;
+  const ev = allDashboardEvents.find(x=>x.id===dashEditingId);
+  try{
+    await DASHBOARD.doc(dashEditingId).delete();
+    // 업무일지에서 온 복사본이면, 업무일지의 '대시' 체크도 해제(다시 자동 생성되지 않도록)
+    if(ev && ev.fromEntry){ try{ await ENTRIES.doc(ev.fromEntry).update({ onDash:false }); }catch(e){} }
+    logAction('대시보드 일정 삭제', ev ? (ev.text||'') : dashEditingId);
+    closeDashAddModal();
+  }catch(err){ alert('삭제 실패: ' + err.message); }
 };
 
 // 포인터 기반 드래그/클릭 (마우스 + 터치 모두 지원)
@@ -3572,7 +3629,7 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
   // 빈 날짜 칸 클릭 → 그 날짜로 "일정 추가" 창 열기 (알약(일정) 클릭은 삭제 로직이 처리)
   gridEl.addEventListener('click', (e)=>{
     if(justDragged){ justDragged = false; return; }
-    if(e.target.closest('.dash-pill') || e.target.closest('.dash-logpill')) return;
+    if(e.target.closest('.dash-pill')) return;   // 일정(알약) 클릭은 pointerup에서 수정창 처리
     const cell = e.target.closest('.dash-day-cell[data-date]');
     if(cell) openDashAddModal(cell.dataset.date);
   });
@@ -3611,10 +3668,9 @@ document.getElementById('dashAddBtn').onclick = async ()=>{
     if(d.pill) d.pill.classList.remove('dragging');
     if(d.moved) justDragged = true;
     if(!d.moved){
-      // 클릭 = 삭제
-      if(!await customConfirm('이 일정을 삭제할까요?')) return;
-      try{ await DASHBOARD.doc(d.id).delete(); }
-      catch(err){ alert('삭제 실패: ' + err.message); }
+      // 클릭 = 수정창 열기 (구분·내용 수정 / 삭제)
+      const ev = allDashboardEvents.find(x=>x.id===d.id);
+      if(ev) openDashEditModal(ev);
       return;
     }
     // 드래그 = 이동 (기간 유지)
