@@ -148,6 +148,17 @@
   .status-chip.sel-done{ background:var(--slate); border-color:var(--slate); color:#fff; }
   .status-chip.sel-progress{ background:var(--seal); border-color:var(--seal); color:#fff; }
   .status-chip.sel-wait{ background:var(--yellow); border-color:var(--yellow); color:var(--ink); }
+  /* 상태 간편 변경 팝업 */
+  .status-opt-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .status-opt{ flex:1; text-align:center; font-size:14px; font-weight:700; padding:14px 6px; border-radius:10px; border:1.5px solid var(--rule-strong); background:var(--paper); color:var(--ink); cursor:pointer; font-family:inherit; }
+  .status-opt.sp-progress{ border-color:var(--seal); color:var(--seal); }
+  .status-opt.sp-progress.active{ background:var(--seal); color:#fff; }
+  .status-opt.sp-wait{ border-color:var(--yellow); color:#9A7B00; }
+  .status-opt.sp-wait.active{ background:var(--yellow); color:var(--ink); }
+  .status-opt.sp-done{ border-color:var(--slate); color:var(--slate); }
+  .status-opt.sp-done.active{ background:var(--slate); color:#fff; }
+  .status-opt.sp-clear{ width:100%; font-size:13px; font-weight:500; padding:10px; color:var(--ink-soft); }
+  .status-opt.sp-clear.active{ background:var(--rule); }
 
   .add-btn{
     width:100%; padding:11px; border:none; border-radius:10px;
@@ -212,6 +223,11 @@
   .entry .dash-check{ flex:none; width:38px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-left:1.5px solid var(--rule-strong); cursor:pointer; }
   .entry .dash-check input{ margin:0; cursor:pointer; width:15px; height:15px; accent-color:var(--seal); }
   .entry .dash-check-cap{ font-size:9px; color:var(--ink-soft); }
+  .entry .note-col{ cursor:pointer; }
+  .entry .entry-edit-btn{ flex:none; width:40px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; border:none; border-left:1.5px solid var(--rule-strong); background:transparent; cursor:pointer; font-family:inherit; padding:0; }
+  .entry .entry-edit-btn:active{ background:rgba(203,210,217,.25); }
+  .entry .entry-edit-ico{ font-size:14px; line-height:1; }
+  .entry .entry-edit-cap{ font-size:9px; color:var(--ink-soft); }
   .dash-check-label{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink); margin:6px 2px 0; cursor:pointer; }
   .dash-check-label input{ width:16px; height:16px; accent-color:var(--seal); cursor:pointer; }
   /* 대시보드에서 업무일지 체크 항목이 축약돼 뜨는 알약 */
@@ -670,9 +686,9 @@
 
     <label class="field-label">비고</label>
     <div class="status-row" id="statusRow">
-      <div class="status-chip" data-v="완료">완료</div>
       <div class="status-chip" data-v="진행중">진행중</div>
       <div class="status-chip" data-v="대기중">대기중</div>
+      <div class="status-chip" data-v="완료">완료</div>
     </div>
     <div class="field">
       <input type="text" id="noteInput">
@@ -892,9 +908,9 @@
     <div class="field"><input type="text" id="editInspection"></div>
     <label class="field-label">비고</label>
     <div class="status-row" id="editStatusRow">
-      <div class="status-chip" data-v="완료">완료</div>
       <div class="status-chip" data-v="진행중">진행중</div>
       <div class="status-chip" data-v="대기중">대기중</div>
+      <div class="status-chip" data-v="완료">완료</div>
     </div>
     <div class="field"><input type="text" id="editNote"></div>
     <label class="field-label">기준일 (선택, 디데이 표시)</label>
@@ -904,6 +920,19 @@
       <button class="danger" id="editDelete">삭제</button>
       <button class="primary" id="editSave">저장</button>
     </div>
+  </div>
+</div>
+
+<!-- 상태(비고) 간편 변경 팝업 -->
+<div class="overlay center-modal" id="statusPopup">
+  <div class="sheet" style="max-width:300px;">
+    <h3>상태 변경 <span class="x" id="statusPopupClose">닫기 ✕</span></h3>
+    <div class="status-opt-row">
+      <button class="status-opt sp-progress" data-v="진행중">진행중</button>
+      <button class="status-opt sp-wait" data-v="대기중">대기중</button>
+      <button class="status-opt sp-done" data-v="완료">완료</button>
+    </div>
+    <button class="status-opt sp-clear" data-v="">상태 없음(비우기)</button>
   </div>
 </div>
 
@@ -955,9 +984,9 @@
       <input type="text" id="recurCatInput" placeholder="구분 (예: 리뷰현황)">
       <input type="text" id="recurContentInput" placeholder="내용 (선택 — 비워두면 매일 직접 입력)">
       <div class="role-toggle" id="recurNoteRole">
-        <div class="chip active" data-v="완료">완료</div>
         <div class="chip" data-v="진행중">진행중</div>
         <div class="chip" data-v="대기중">대기중</div>
+        <div class="chip active" data-v="완료">완료</div>
       </div>
       <button class="add-btn" id="recurAddBtn">반복업무 추가</button>
     </div>
@@ -1705,8 +1734,9 @@ function renderList(){
           ${handle}
           <span class="cat">${escapeHtml(e.category)}</span>
           <span class="content-line"><span class="content-main">${escapeHtml(e.content)}</span>${inspLine}</span>
-          <span class="note-col ${cls}">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
+          <span class="note-col ${cls}" title="눌러서 상태(비고) 변경">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
           <label class="dash-check" title="체크하면 대시보드 같은 날짜에 구분이 떠요"><input type="checkbox" class="dash-check-box" data-id="${e.id}" ${e.onDash?'checked':''}><span class="dash-check-cap">대시</span></label>
+          <button class="entry-edit-btn" data-id="${e.id}" title="수정"><span class="entry-edit-ico">✏️</span><span class="entry-edit-cap">수정</span></button>
         </div>`;
     }
 
@@ -1836,10 +1866,37 @@ updateMonthBtnLabel();
 
 document.getElementById('listWrap').addEventListener('click', (e)=>{
   if(e.target.closest('.drag-handle')) return;
-  if(e.target.closest('.dash-check')) return;   // 대시보드 체크칸 클릭은 수정창을 열지 않음
-  const row = e.target.closest('.entry');
-  if(!row) return;
-  openEdit(row.dataset.id);
+  if(e.target.closest('.dash-check')) return;   // 대시보드 체크칸
+  // 오른쪽 '수정' 버튼 → 수정창 열기
+  const editBtn = e.target.closest('.entry-edit-btn');
+  if(editBtn){ openEdit(editBtn.dataset.id); return; }
+  // 상태(진행중/대기중/완료) 칸 클릭 → 상태만 간편 변경하는 창 열기
+  const noteCol = e.target.closest('.note-col');
+  if(noteCol){ const row = noteCol.closest('.entry'); if(row) openStatusPopup(row.dataset.id); return; }
+  // 그 외 칸을 눌러도 아무 일도 일어나지 않음(예전엔 아무 데나 누르면 수정창이 열렸음)
+});
+
+/* ---- 상태(비고) 간편 변경 팝업 ---- */
+let statusPopupId = null;
+function openStatusPopup(id){
+  statusPopupId = id;
+  const en = allEntries.find(x=>x.id===id);
+  const cur = en ? (en.note || '') : '';
+  [...document.querySelectorAll('#statusPopup .status-opt')].forEach(b=> b.classList.toggle('active', b.dataset.v === cur));
+  document.getElementById('statusPopup').classList.add('open');
+}
+function closeStatusPopup(){ document.getElementById('statusPopup').classList.remove('open'); statusPopupId = null; }
+document.getElementById('statusPopupClose').onclick = closeStatusPopup;
+document.getElementById('statusPopup').addEventListener('click', async (e)=>{
+  if(e.target.id === 'statusPopup'){ closeStatusPopup(); return; }   // 바깥(어두운 곳) 클릭 → 닫기
+  const opt = e.target.closest('.status-opt');
+  if(!opt) return;
+  const id = statusPopupId;
+  if(!id){ closeStatusPopup(); return; }
+  const v = opt.dataset.v;
+  try{ await ENTRIES.doc(id).update({ note: v }); logAction('상태 변경', v || '없음'); }
+  catch(err){ alert('변경 실패: ' + err.message); }
+  closeStatusPopup();
 });
 // 업무일지 대시보드 체크칸 → 체크 시 대시보드 같은 날짜에 구분이 뜨도록 (onDash 저장)
 document.getElementById('listWrap').addEventListener('change', async (e)=>{
@@ -2092,7 +2149,7 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
     if(navigator.clipboard && window.ClipboardItem){
       const item = new ClipboardItem({
         'image/png': new Promise((resolve, reject)=>{
-          html2canvas(target, {backgroundColor:'#FFFFFF', scale:2})
+          html2canvas(target, {backgroundColor:'#FFFFFF', scale:3})
             .then(canvas => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('빈 이미지'))))
             .catch(reject);
         })
@@ -2104,7 +2161,7 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
     }
   }catch(err){
     try{
-      const canvas = await html2canvas(target, {backgroundColor:'#FFFFFF', scale:2});
+      const canvas = await html2canvas(target, {backgroundColor:'#FFFFFF', scale:3});
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url; a.download = `업무일지_${reportDate}.png`;
