@@ -323,16 +323,16 @@
     background:#fff; border:1px solid var(--rule); border-radius:12px; padding:16px;
   }
   .report-capture-title{
-    font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:700; font-size:15px; margin-bottom:10px;
+    font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:700; font-size:19px; margin-bottom:10px;
     padding-bottom:9px; border-bottom:1px solid var(--rule-strong); color:var(--ink);
   }
-  .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:12.5px; width: -webkit-fit-content; width: -moz-fit-content; width: fit-content; max-width:100%; }
+  .rc-row{ display:flex; align-items:stretch; border-bottom:1px dashed var(--rule); font-size:15.5px; width:100%; }
   .rc-row:last-child{ border-bottom:none; }
-  .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:600; color:var(--ink); font-size:11px; white-space:pre-wrap; word-break:break-word; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
-  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); border-right:1.5px solid var(--rule-strong); padding:7px 8px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; text-align:left; gap:3px; }
+  .rc-row .rc-cat{ flex:none; width:auto; min-width:56px; font-weight:700; color:var(--ink); font-size:14px; white-space:pre-wrap; word-break:break-word; overflow:visible; border-right:1.5px solid var(--rule-strong); padding:10px 11px; display:flex; align-items:center; justify-content:flex-start; text-align:left; }
+  .rc-row .rc-content{ flex:1; min-width:0; color:var(--ink); border-right:1.5px solid var(--rule-strong); padding:10px 11px; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; text-align:left; gap:4px; line-height:1.5; }
   .rc-row .rc-note-col{
-    flex:none; width:auto; min-width:50px; padding:7px 6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
-    font-size:10px; font-weight:600; color:var(--ink-soft); background:transparent;
+    flex:none; width:auto; min-width:64px; padding:10px 8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:2px;
+    font-size:13px; font-weight:700; color:var(--ink-soft); background:transparent;
   }
   .rc-row .rc-note-col.done{ background:var(--slate); color:#fff; }
   .rc-row .rc-note-col.progress{ background:var(--seal); color:#fff; }
@@ -2097,7 +2097,7 @@ function buildReport(){
   }
   syncRowColumns(document.querySelectorAll('#reportCaptureBody .rc-row'), {
     handleSel:null, catSel:'.rc-cat', contentSel:'.rc-content', noteSel:'.rc-note-col',
-    catBuffer:12, noteBuffer:12, contentMode:'fit'
+    catBuffer:12, noteBuffer:12, contentMode:'fill'
   });
   {
     const firstRow = document.querySelector('#reportCaptureBody .rc-row');
