@@ -411,20 +411,20 @@
   .cl-subnav-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
 
   .cl-calendar-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--rule-strong); border:1px solid var(--rule-strong); border-radius:10px; overflow:hidden; }
-  .cl-cal-dow{ background:var(--paper); text-align:center; font-size:11px; color:var(--ink-soft); padding:6px 0; font-weight:600; }
-  .cl-cal-cell{ background:#fff; min-height:96px; padding:5px; display:flex; flex-direction:column; gap:3px; }
+  .cl-cal-dow{ background:var(--paper); text-align:center; font-size:13px; color:var(--ink); padding:7px 0; font-weight:700; }
+  .cl-cal-cell{ background:#fff; min-height:100px; padding:5px; display:flex; flex-direction:column; gap:4px; }
   .cl-cal-cell.empty{ background:var(--paper); }
   .cl-cal-cell.today{ background:var(--seal-soft); }
   .cl-cal-cell.dragover{ outline:2px dashed var(--seal); outline-offset:-2px; }
-  .cl-cal-daynum{ font-size:11px; font-weight:700; color:var(--ink-soft); margin-bottom:2px; }
+  .cl-cal-daynum{ font-size:13px; font-weight:800; color:var(--ink); margin-bottom:2px; }
   .cl-pill{
-    font-size:9.5px; padding:2px 6px; border-radius:999px; background:var(--seal-soft); color:var(--seal);
-    cursor:grab; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+    font-size:12px; padding:3px 8px; border-radius:8px; background:var(--seal-soft); color:#1E40AF;
+    cursor:grab; white-space:normal; word-break:break-word; overflow-wrap:anywhere; max-width:100%; font-weight:600; line-height:1.35;
   }
-  .cl-pill.done{ background:var(--rule); color:var(--ink-soft); text-decoration:line-through; opacity:.75; }
+  .cl-pill.done{ background:var(--rule); color:#4B5563; text-decoration:line-through; }
   .cl-pill.dragging{ opacity:.3; }
-  .cl-pill.todo{ background:#FDECEA; color:#C0392B; }
-  .cl-pill.todo.done{ background:var(--rule); color:var(--ink-soft); text-decoration:line-through; }
+  .cl-pill.todo{ background:#FDECEA; color:#B0281A; }
+  .cl-pill.todo.done{ background:var(--rule); color:#4B5563; text-decoration:line-through; }
 
   /* ===== 할일(To-do) ===== */
   .todo-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; background:#fff; border:1px solid var(--rule); border-radius:10px; margin-bottom:7px; }
