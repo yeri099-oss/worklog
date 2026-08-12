@@ -2144,6 +2144,10 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
   const orig = btn.textContent;
   btn.disabled = true; btn.textContent = '이미지 생성 중…';
   const target = document.getElementById('reportCapture');
+  // 이미지를 만들 때만 가로로 넓게(1000px) 다시 배치 → 내용이 덜 접혀 더 잘 보임. 캡처 후 원래 미리보기로 복원.
+  const prevW = target.style.width;
+  target.style.width = '1000px';
+  buildReport();   // 넓은 폭 기준으로 열 너비 재계산(동기 레이아웃)
   try{
     if(navigator.clipboard && window.ClipboardItem){
       const item = new ClipboardItem({
@@ -2170,6 +2174,8 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
       alert('이미지 생성에 실패했습니다: ' + err2.message);
     }
   }finally{
+    target.style.width = prevW;   // 미리보기 폭 원복
+    buildReport();
     btn.disabled = false; btn.textContent = orig;
   }
 };
