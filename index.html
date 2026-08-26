@@ -2787,7 +2787,7 @@ document.getElementById('todoList').addEventListener('click', async (e)=>{
   const row = e.target.closest('.todo-row'); if(!row) return;
   const id = row.dataset.id;
   const act = e.target.closest('[data-act]') && e.target.closest('[data-act]').dataset.act;
-  if(act==='done'){ if(await customConfirm('이 할일을 완료할까요? 완료하면 목록에서 사라져요.')) completeTodo(id); }
+  if(act==='done'){ if(await customConfirm('이 할일을 완료할까요? (달력에는 취소선으로 남아요)')) completeTodo(id); }
   else if(act==='edit') editTodo(id);
   else if(act==='del') deleteTodo(id);
 });
@@ -2936,8 +2936,9 @@ function renderChecklistCalendar(){
     (itemsByDay[d] = itemsByDay[d]||[]).push(it);
   });
   // 할일을 달력 날짜(calDate: 마감일 또는 추가한 날짜) 칸에 표시. 무기한 할일도 추가한 날짜에 뜸.
+  // 완료해도 사라지지 않고 그 자리에 취소선으로 남음(루틴과 동일).
   const todosByDay = {};
-  allTodos.filter(t=>!t.done).forEach(t=>{
+  allTodos.forEach(t=>{
     const cd = todoCalDate(t);
     if(cd.slice(0,7) !== clCurrentMonth) return;
     const d = parseInt(cd.slice(8,10),10);
@@ -2951,7 +2952,7 @@ function renderChecklistCalendar(){
     const isToday = dateStr === todayS;
     const items = (itemsByDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
     const pills = items.map(it=>`<span class="cl-pill ${it.done?'done':''}" draggable="true" data-id="${it.id}" title="${escapeAttr(it.text)}">${escapeHtml(it.text)}</span>`).join('');
-    const todoPills = (todosByDay[d]||[]).map(t=>`<span class="cl-pill todo" draggable="true" data-id="${t.id}" data-type="todo" title="${escapeAttr('할일: '+t.text + (t.deadline ? (' (마감 '+t.deadline+')') : ''))}">${escapeHtml(t.text)}</span>`).join('');
+    const todoPills = (todosByDay[d]||[]).map(t=>`<span class="cl-pill todo ${t.done?'done':''}" draggable="true" data-id="${t.id}" data-type="todo" title="${escapeAttr('할일: '+t.text + (t.deadline ? (' (마감 '+t.deadline+')') : '') + (t.done ? ' — 완료' : ''))}">${escapeHtml(t.text)}</span>`).join('');
     html += `<div class="cl-cal-cell ${isToday?'today':''}" data-date="${dateStr}"><span class="cl-cal-daynum">${d}</span>${pills}${todoPills}</div>`;
   }
   grid.innerHTML = html;
@@ -2960,8 +2961,16 @@ document.getElementById('clCalendarGrid').addEventListener('click', async (e)=>{
   const pill = e.target.closest('.cl-pill');
   if(!pill) return;
   if(pill.dataset.type==='todo'){
-    // 달력에서 할일 완료 → 확인창(가운데) 후 완료. 완료하면 사라짐(다음 달로 안 넘어감)
-    if(await customConfirm('이 할일을 완료할까요? 완료하면 목록에서 사라져요.')) completeTodo(pill.dataset.id);
+    const id = pill.dataset.id;
+    const t = allTodos.find(x=>x.id===id);
+    if(t && t.done){
+      // 완료된 할일 클릭 → 완료 해제(취소선 제거)
+      try{ await TODOS.doc(id).update({ done:false, completedAt:'' }); logAction('할일 완료 해제', ''); }
+      catch(err){ alert('변경 실패: ' + err.message); }
+    } else {
+      // 완료 → 확인창(가운데) 후 완료. 사라지지 않고 그 자리에 취소선으로 남음
+      if(await customConfirm('이 할일을 완료할까요?')) completeTodo(id);
+    }
     return;
   }
   toggleDailyItemDone(pill.dataset.id);
