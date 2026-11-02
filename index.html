@@ -1080,7 +1080,7 @@ document.getElementById('checkinBtn').onclick = async ()=>{
   if(!recurringTasks.length){ alert('등록된 반복업무가 없습니다. "관리"에서 먼저 추가해주세요.'); return; }
   btn.disabled = true; btn.textContent = '추가 중…';
   try{
-    const base = Date.now();
+    const planSeq = makeSeqPlanner(selectedDate, currentUser.uid);
     const batch = db.batch();
     recurringTasks.forEach((it, idx)=>{
       const ref = ENTRIES.doc();
@@ -1091,7 +1091,7 @@ document.getElementById('checkinBtn').onclick = async ()=>{
         note: it.note,
         ownerUid: currentUser.uid,
         ownerName: currentUser.displayName,
-        seq: base + idx,
+        seq: planSeq(it.note),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     });
@@ -1320,7 +1320,7 @@ document.getElementById('addBtn').onclick = async ()=>{
       dueDate: dueDate,
       ownerUid: currentUser.uid,
       ownerName: currentUser.displayName,
-      seq: Date.now(),
+      seq: makeSeqPlanner(selectedDate, currentUser.uid)(note),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     logAction('업무일지 추가', `${selectedDate} ${cat}`);
@@ -1395,7 +1395,7 @@ async function autoCarryOverUnfinished(){
     !e.carriedOverDone
   );
   if(!toCopy.length) return;
-  const base = Date.now();
+  const planSeq = makeSeqPlanner(today, currentUser.uid);
   const batch = db.batch();
   toCopy.forEach((y, idx)=>{
     const ref = ENTRIES.doc();
@@ -1407,7 +1407,7 @@ async function autoCarryOverUnfinished(){
       dueDate: y.dueDate || '',
       ownerUid: currentUser.uid,
       ownerName: currentUser.displayName,
-      seq: base + idx,
+      seq: planSeq(y.note),
       carriedFrom: y.date,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -1420,6 +1420,26 @@ async function autoCarryOverUnfinished(){
     console.error('이월 실패', err);
     carryOverCheckedFor = null; // 실패 시 다음 스냅샷에서 재시도
   }
+}
+/* 새 업무 기본 배치: 진행중(맨 위) → 기타/완료(중간) → 대기중(맨 아래)
+   - 추가 시점에만 위치를 정하고, 이후 드래그로 바꾼 순서는 그대로 유지 */
+function statusRank(note){ return note==='진행중' ? 0 : note==='대기중' ? 2 : 1; }
+function makeSeqPlanner(date, ownerUid){
+  const list = allEntries.filter(e=>e.date===date && e.ownerUid===ownerUid)
+    .map(e=>({ seq: e.seq||0, rank: statusRank(e.note) }))
+    .sort((a,b)=> a.seq-b.seq);
+  return function(note){
+    const rank = statusRank(note);
+    let pos = 0; // 같은 순위 이하인 마지막 항목 바로 뒤에 삽입
+    list.forEach((e,i)=>{ if(e.rank <= rank) pos = i+1; });
+    let seq;
+    if(!list.length) seq = Date.now();
+    else if(pos === 0) seq = list[0].seq - 1;
+    else if(pos === list.length) seq = Math.max(list[pos-1].seq + 1, Date.now());
+    else seq = (list[pos-1].seq + list[pos].seq) / 2;
+    list.splice(pos, 0, { seq, rank });
+    return seq;
+  };
 }
 function sortEntries(list){
   return list.slice().sort((a,b)=> (a.seq||0) - (b.seq||0));
@@ -1776,7 +1796,7 @@ async function copyEntryToToday(id){
       dueDate: src.dueDate || '',
       ownerUid: src.ownerUid || currentUser.uid,
       ownerName: src.ownerName || currentUser.displayName,
-      seq: Date.now(),
+      seq: makeSeqPlanner(today, src.ownerUid || currentUser.uid)(src.note || ''),
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     logAction('업무일지 오늘로 복사', `${src.category||''} → ${today}`);
