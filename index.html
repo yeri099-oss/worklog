@@ -721,7 +721,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v016</span>
+      <span style="font-size:11px;color:#999">v017</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -821,8 +821,7 @@
     <button class="month-select-btn" id="monthSelectBtn">7월 ▾</button>
     <div class="month-dropdown" id="monthDropdown"></div>
     <span class="month-select-wrap" id="ownerSelectWrap" style="display:none; margin-left:10px;">
-      <button class="month-select-btn" id="ownerSelectBtn" style="font-size:13px;">작성자: 전체 ▾</button>
-      <div class="month-dropdown" id="ownerDropdown"></div>
+      <select class="xl-btn" id="ownerSel" title="누구의 업무일지를 볼지 선택 (관리자)"></select>
     </span>
   </div>
   <div class="search-bar">
@@ -1714,37 +1713,32 @@ function availableOwners(){
   });
   return [...map.entries()];
 }
+/* 관리자: 누구의 일지를 볼지 (엑셀형과 같은 선택 상자, 고른 사람은 두 방식이 함께 기억) */
+function ownerOptionMap(){
+  const map = new Map();
+  map.set(currentUser.uid, '내 일지 (' + currentUser.displayName + ')');
+  (typeof accountsCache !== 'undefined' ? accountsCache : []).filter(a=>a.approved !== false).forEach(a=>{ if(!map.has(a.uid)) map.set(a.uid, a.displayName || a.name || a.id); });
+  allEntries.forEach(e=>{ if(e.ownerUid && !map.has(e.ownerUid)) map.set(e.ownerUid, e.ownerName || '(이름 없음)'); });
+  return map;
+}
 function updateOwnerBtnLabel(){
-  const btn = document.getElementById('ownerSelectBtn');
-  if(!btn) return;
-  if(ownerFilter === 'all'){ btn.textContent = '작성자: 전체 ▾'; return; }
-  const found = availableOwners().find(([uid])=>uid===ownerFilter);
-  btn.textContent = `작성자: ${found ? found[1] : '전체'} ▾`;
+  const sel = document.getElementById('ownerSel');
+  if(!sel || !currentUser) return;
+  const html = `<option value="all">👥 전체</option>` + [...ownerOptionMap().entries()].map(([uid,name])=>`<option value="${escapeAttr(uid)}">👤 ${escapeHtml(name)}</option>`).join('');
+  if(sel.dataset.html !== html){ sel.innerHTML = html; sel.dataset.html = html; }
+  sel.value = ownerFilter;
 }
-function renderOwnerDropdown(){
-  const wrap = document.getElementById('ownerDropdown');
-  const owners = availableOwners();
-  const allOpt = `<div class="month-opt ${ownerFilter==='all'?'active':''}" data-uid="all">전체</div>`;
-  const opts = owners.map(([uid,name])=>`<div class="month-opt ${ownerFilter===uid?'active':''}" data-uid="${escapeAttr(uid)}">${escapeHtml(name)}</div>`).join('');
-  wrap.innerHTML = allOpt + opts;
-}
-document.getElementById('ownerSelectBtn').onclick = (e)=>{
-  e.stopPropagation();
-  renderOwnerDropdown();
-  document.getElementById('ownerDropdown').classList.toggle('open');
-};
-document.getElementById('ownerDropdown').addEventListener('click', (e)=>{
-  const opt = e.target.closest('.month-opt');
-  if(!opt) return;
-  ownerFilter = opt.dataset.uid;
-  document.getElementById('ownerDropdown').classList.remove('open');
-  updateOwnerBtnLabel();
-  renderList();
-});
-document.addEventListener('click', (e)=>{
-  if(!e.target.closest('#ownerSelectWrap')){
-    document.getElementById('ownerDropdown').classList.remove('open');
+async function setViewOwner(uid){
+  xlOwner = (!uid || uid === 'all' || uid === currentUser.uid) ? null : uid;
+  if(xlOwner && !xlOtherPlaces[xlOwner]){
+    xlOtherPlaces[xlOwner] = [];
+    try{ const d = await RECURRING.doc(xlOwner).get(); if(d.exists && Array.isArray(d.data().places)) xlOtherPlaces[xlOwner] = d.data().places; }catch(err){}
   }
+}
+document.getElementById('ownerSel').addEventListener('change', async (e)=>{
+  ownerFilter = e.target.value;
+  await setViewOwner(ownerFilter);
+  renderList();
 });
 function doSearch(){
   const q = document.getElementById('searchInput').value.trim();
@@ -2159,7 +2153,7 @@ document.getElementById('reportOverlay').addEventListener('click', (e)=>{ if(e.t
 function buildReport(){
   const {day, wd, month, year} = fmtLabel(reportDate);
   document.getElementById('reportTitleText').textContent = `${month}월 ${day}일 업무 보고`;
-  document.getElementById('reportCaptureTitle').textContent = `${year}년 ${month}월 ${day}일 (${wd}) 업무일지`;
+  document.getElementById('reportCaptureTitle').textContent = `${year}년 ${month}월 ${day}일 (${wd}) 업무일지` + (xlIsOther() ? ` · ${xlOwnerName()}` : '');
   const cap = document.getElementById('reportCapture');
   if(typeof viewMode !== 'undefined' && viewMode === 'excel'){
     // 엑셀형: 게시용 복사와 같은 표 모양(분류 포함)으로 이미지 생성
@@ -2171,7 +2165,7 @@ function buildReport(){
   }
   cap.style.width = ''; cap.style.minWidth = '';
   document.getElementById('reportOverlay').classList.remove('fit');
-  const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===currentUser.uid)).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+  const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===xlOwnerUid())).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   const bodyEl = document.getElementById('reportCaptureBody');
   if(!entries.length){
     bodyEl.innerHTML = `<div class="rc-empty">기록된 업무가 없습니다.</div>`;
@@ -2211,7 +2205,7 @@ function showToast(msg){
 }
 document.getElementById('reportTextCopy').onclick = async ()=>{
   const {day, wd, month, year} = fmtLabel(reportDate);
-  const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===currentUser.uid)).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+  const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===xlOwnerUid())).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   let text = `${year}년 ${month}월 ${day}일 (${wd}) 업무일지\n\n`;
   if(!entries.length){
     text += '(기록된 업무가 없습니다)';
@@ -3875,7 +3869,6 @@ function stopPrefsSync(){
 }
 function applyViewMode(mode){
   viewMode = mode === 'excel' ? 'excel' : 'basic';
-  if(viewMode === 'basic') xlOwner = null; // 기본형은 항상 내 일지 기준
   document.getElementById('tabWorklog').classList.toggle('xl-mode', viewMode==='excel');
   document.body.classList.toggle('xl-wide', viewMode==='excel');
   [...document.querySelectorAll('#viewModeSeg button')].forEach(b=> b.classList.toggle('active', b.dataset.m===viewMode));
@@ -3925,12 +3918,9 @@ function xlRenderOwnerSel(){
 }
 document.getElementById('xlOwnerSel').addEventListener('change', async (e)=>{
   const uid = e.target.value;
-  xlOwner = (uid === currentUser.uid) ? null : uid;
+  ownerFilter = uid;  // 기본형으로 바꿔도 같은 사람
   xlDrafts = []; xlSearch = ''; document.getElementById('xlSearchInput').value = '';
-  if(xlOwner && !xlOtherPlaces[xlOwner]){
-    xlOtherPlaces[xlOwner] = [];
-    try{ const d = await RECURRING.doc(xlOwner).get(); if(d.exists && Array.isArray(d.data().places)) xlOtherPlaces[xlOwner] = d.data().places; }catch(err){}
-  }
+  await setViewOwner(uid);
   // 그 사람이 마지막으로 쓴 날짜로 이동
   const dates = xlMine().map(x=>x.date).sort();
   xlDate = dates.includes(todayStr()) || !dates.length ? todayStr() : dates[dates.length-1];
