@@ -710,7 +710,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v008</span>
+      <span style="font-size:11px;color:#999">v009</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -4458,27 +4458,39 @@ function xlDayRows(d){
   return xlGroups(sortEntries(xlMine().filter(e=>e.date===d))).filter(g=>g.entries.length);
 }
 function xlBuildPostHtml(d){
+  // 엑셀에서 복사한 표처럼: 칸 폭 고정 + 줄바꿈 안 함 → 게시판(플로우 등)에서 길면 가로 스크롤
   const {year, month, day, wd} = fmtLabel(d);
   const groups = xlDayRows(d);
-  const td = 'border:1px solid #CBD2D9; padding:6px 10px; font-size:14px; vertical-align:middle;';
-  const th = td + 'background:#F3F4F6; font-weight:bold; text-align:left;';
+  const font = '14px "Malgun Gothic", "맑은 고딕", sans-serif';
+  const w = (texts, min, max)=> Math.round(Math.min(max, Math.max(min, ...texts.map(t=> xlTextWidth(t||'', font) + 24))));
+  const all = groups.flatMap(g=> g.entries);
+  const W = [
+    w(groups.map(g=> g.place || '공통').concat(['분류']), 70, 200),
+    w(all.map(e=> e.category).concat(['제목']), 90, 320),
+    w(all.map(e=> e.content).concat(['내용']), 200, 2400),
+    70
+  ];
+  const total = W.reduce((x,y)=>x+y, 0);
+  const td = 'border:1px solid #CBD2D9; padding:6px 10px; font-size:14px; vertical-align:middle; white-space:nowrap;';
+  const th = td + 'background:#F3F4F6; font-weight:bold;';
   const nl = (t)=> escapeHtml(t||'').replace(/\n/g,'<br>');
-  let rows = '';
+  const cell = (i, style, html, extra)=> `<td nowrap width="${W[i]}" style="${style} width:${W[i]}px;"${extra||''}>${html}</td>`;
+  let rows = '<tr>' + cell(0, th+'text-align:center;', '분류') + cell(1, th, '제목') + cell(2, th, '내용') + cell(3, th+'text-align:center;', '상태') + '</tr>';
   groups.forEach(g=>{
     g.entries.forEach((e,i)=>{
       const st = XL_STATUS_STYLE[e.note] || ['#FFFFFF','#1F2328'];
       rows += '<tr>'
-        + (i===0 ? `<td rowspan="${g.entries.length}" style="${td} font-weight:bold; text-align:center; background:#FAFAFB;">${g.place ? escapeHtml(g.place) : '공통'}</td>` : '')
-        + `<td style="${td}">${nl(e.category)}</td>`
-        + `<td style="${td}">${nl(e.content)}</td>`
-        + `<td style="${td} text-align:center; background:${st[0]}; color:${st[1]}; white-space:nowrap;">${escapeHtml(e.note||'')}</td>`
+        + (i===0 ? cell(0, td+'font-weight:bold; text-align:center; background:#FAFAFB;', g.place ? escapeHtml(g.place) : '공통', ` rowspan="${g.entries.length}"`) : '')
+        + cell(1, td, nl(e.category))
+        + cell(2, td, nl(e.content))
+        + cell(3, td+`text-align:center; background:${st[0]}; color:${st[1]};`, escapeHtml(e.note||''))
         + '</tr>';
     });
   });
   return `<p style="font-size:15px; margin:0 0 8px;"><b>${year}년 ${month}월 ${day}일 ${wd}요일</b></p>`
-    + `<table style="border-collapse:collapse; width:100%;"><thead><tr>`
-    + `<th style="${th} width:80px; text-align:center;">분류</th><th style="${th} width:140px;">제목</th><th style="${th}">내용</th><th style="${th} width:70px; text-align:center;">상태</th>`
-    + `</tr></thead><tbody>${rows}</tbody></table>`;
+    + `<table border="1" cellspacing="0" cellpadding="0" width="${total}" style="border-collapse:collapse; table-layout:fixed; width:${total}px;">`
+    + `<colgroup>${W.map(x=>`<col width="${x}" style="width:${x}px;">`).join('')}</colgroup>`
+    + `<tbody>${rows}</tbody></table>`;
 }
 function xlBuildPostText(d){
   const {year, month, day, wd} = fmtLabel(d);
