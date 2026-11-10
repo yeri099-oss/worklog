@@ -30,6 +30,8 @@
     --slate: #64748B;
     --slate-soft: #EEF1F4;
     --yellow: #EAB308;
+    --plan: #7C3AED;
+    --plan-soft: #EDE9FE;
     --danger: #DC2626;
     --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 20px rgba(31,35,40,.06);
   }
@@ -140,13 +142,17 @@
   .status-chip.sel-done{ background:var(--slate); border-color:var(--slate); color:#fff; }
   .status-chip.sel-progress{ background:var(--seal); border-color:var(--seal); color:#fff; }
   .status-chip.sel-wait{ background:var(--yellow); border-color:var(--yellow); color:var(--ink); }
+  .status-chip.sel-plan{ background:var(--plan); border-color:var(--plan); color:#fff; }
   /* 상태 간편 변경 팝업 */
-  .status-opt-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .status-opt-row{ display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+  .status-opt-row .status-opt{ min-width:calc(50% - 4px); }
   .status-opt{ flex:1; text-align:center; font-size:14px; font-weight:700; padding:14px 6px; border-radius:10px; border:1.5px solid var(--rule-strong); background:var(--paper); color:var(--ink); cursor:pointer; font-family:inherit; }
   .status-opt.sp-progress{ border-color:var(--seal); color:var(--seal); }
   .status-opt.sp-progress.active{ background:var(--seal); color:#fff; }
   .status-opt.sp-wait{ border-color:var(--yellow); color:#9A7B00; }
   .status-opt.sp-wait.active{ background:var(--yellow); color:var(--ink); }
+  .status-opt.sp-plan{ border-color:var(--plan); color:var(--plan); }
+  .status-opt.sp-plan.active{ background:var(--plan); color:#fff; }
   .status-opt.sp-done{ border-color:var(--slate); color:var(--slate); }
   .status-opt.sp-done.active{ background:var(--slate); color:#fff; }
   .status-opt.sp-clear{ width:100%; font-size:13px; font-weight:500; padding:10px; color:var(--ink-soft); }
@@ -191,6 +197,8 @@
     border-right:1.5px solid var(--rule-strong);
     padding:9px 10px; display:flex; align-items:center; justify-content:flex-start; text-align:left;
   }
+  .entry .cat .place-tag{ display:block; font-size:9.5px; font-weight:500; color:var(--ink-soft); }
+  .entry .cat:has(.place-tag){ flex-direction:column; align-items:flex-start; justify-content:center; }
   .entry .content-line{
     flex:1; min-width:0; font-size:13.5px; line-height:1.5; color:var(--ink);
     border-right:1.5px solid var(--rule-strong);
@@ -226,6 +234,7 @@
   .entry .note-col.done{ background:var(--slate); color:#fff; }
   .entry .note-col.progress{ background:var(--seal); color:#fff; }
   .entry .note-col.wait{ background:var(--yellow); color:var(--ink); }
+  .entry .note-col.plan{ background:var(--plan); color:#fff; }
   .entry .note-col.stale{ background:var(--danger); color:#fff; }
   .rc-row .rc-note-col.stale{ background:var(--danger); color:#fff; }
   .dday{ font-size:9px; font-weight:700; opacity:.85; }
@@ -327,6 +336,7 @@
   .rc-row .rc-note-col.done{ background:var(--slate); color:#fff; }
   .rc-row .rc-note-col.progress{ background:var(--seal); color:#fff; }
   .rc-row .rc-note-col.wait{ background:var(--yellow); color:var(--ink); }
+  .rc-row .rc-note-col.plan{ background:var(--plan); color:#fff; }
   .rc-empty{ text-align:center; color:var(--ink-soft); font-size:12.5px; padding:20px 0; }
   .copied-toast{
     position:fixed; bottom:26px; left:50%; transform:translateX(-50%);
@@ -376,6 +386,7 @@
   .team-stat-row .pill.done{ background:var(--slate); color:#fff; }
   .team-stat-row .pill.progress{ background:var(--seal); color:#fff; }
   .team-stat-row .pill.wait{ background:var(--yellow); color:var(--ink); }
+  .team-stat-row .pill.plan{ background:var(--plan); color:#fff; }
   .pending-row{ padding:10px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
   .pending-row:last-child{ border-bottom:none; }
   .pending-row .meta{ color:var(--ink-soft); font-size:11.5px; margin:2px 0 8px; }
@@ -548,6 +559,81 @@
     main{ padding:10px 12px 0; }
     .header-inner{ padding:12px 14px 10px; }
   }
+  /* ===== 엑셀형 입력 모드 ===== */
+  .wl-mode-bar{ display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:10px; font-size:12px; color:var(--ink-soft); }
+  .seg{ display:inline-flex; border:1px solid var(--rule-strong); border-radius:999px; overflow:hidden; }
+  .seg button{ border:none; background:var(--paper); padding:5px 13px; font-size:12px; cursor:pointer; font-family:inherit; color:var(--ink-soft); }
+  .seg button.active{ background:var(--ink); color:#fff; font-weight:600; }
+  #xlWrap{ display:none; }
+  #tabWorklog.xl-mode > *:not(.wl-mode-bar):not(#xlWrap){ display:none !important; }
+  #tabWorklog.xl-mode #xlWrap{ display:block; }
+  .xl-top{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:12px; }
+  .xl-top input[type=text]{ flex:1; min-width:140px; width:auto; padding:7px 10px; font-size:13.5px; }
+  .xl-top input[type=date]{ width:auto; padding:6px 8px; font-size:13px; }
+  .xl-btn{ border:1px solid var(--rule-strong); background:var(--paper); border-radius:8px; padding:7px 11px; font-size:12.5px; cursor:pointer; font-family:inherit; color:var(--ink); white-space:nowrap; }
+  .xl-btn.primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .xl-tabs-wrap{ display:flex; align-items:flex-end; gap:6px; border-bottom:2px solid var(--ink); }
+  .xl-month{ flex:none; display:flex; align-items:center; font-size:12.5px; font-weight:700; padding-bottom:4px; }
+  .xl-month button{ border:none; background:none; cursor:pointer; font-size:17px; padding:0 6px; color:var(--ink-soft); font-family:inherit; }
+  .xl-tabs{ display:flex; gap:2px; overflow-x:auto; flex:1; min-width:0; scrollbar-width:thin; }
+  .xl-tab{ flex:none; border:1px solid var(--rule-strong); border-bottom:none; background:var(--slate-soft); padding:6px 10px; font-size:12px; border-radius:7px 7px 0 0; cursor:pointer; font-family:inherit; color:var(--ink-soft); white-space:nowrap; }
+  .xl-tab.active{ background:var(--ink); color:#fff; border-color:var(--ink); font-weight:700; }
+  .xl-tab.today:not(.active){ color:var(--seal); font-weight:700; }
+  .xl-tab.add{ background:#fff; border-style:dashed; color:var(--seal); font-weight:700; }
+  .xl-sheet{ background:#fff; border:1px solid var(--rule-strong); border-top:none; padding:14px; border-radius:0 0 10px 10px; margin-bottom:24px; }
+  .xl-title{ font-weight:800; font-size:17px; margin-bottom:10px; display:flex; align-items:baseline; gap:8px; }
+  .xl-title small{ font-size:12px; font-weight:400; color:var(--ink-soft); }
+  .xl-table{ border:1px solid var(--rule-strong); border-bottom:none; }
+  .xl-head{ display:flex; background:var(--slate-soft); font-size:12px; font-weight:700; border-bottom:1px solid var(--rule-strong); }
+  .xl-head span{ padding:7px 8px; border-right:1px solid var(--rule-strong); }
+  .xl-head span:last-child{ border-right:none; }
+  .xl-w-place{ flex:none; width:84px; }
+  .xl-w-cat{ flex:none; width:172px; }
+  .xl-w-content{ flex:1; min-width:0; }
+  .xl-w-status{ flex:none; width:104px; text-align:center; }
+  .xl-group{ display:flex; border-bottom:1px solid var(--rule-strong); }
+  .xl-place{ flex:none; width:84px; padding:8px; font-weight:700; font-size:13px; border-right:1px solid var(--rule-strong); display:flex; align-items:center; justify-content:center; text-align:center; background:#FAFAFB; word-break:keep-all; }
+  .xl-place.etc{ color:var(--ink-soft); font-weight:500; }
+  .xl-col{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .xl-rows{ min-height:4px; }
+  .xl-rows.drop-target{ background:var(--seal-soft); }
+  .xl-row{ display:flex; align-items:stretch; border-bottom:1px solid var(--rule); background:#fff; }
+  .xl-row.dragging{ opacity:.55; background:var(--seal-soft); }
+  .xl-handle{ flex:none; width:22px; display:flex; align-items:center; justify-content:center; color:var(--rule-strong); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; border-right:1px solid var(--rule); font-size:13px; }
+  .xl-handle:active{ cursor:grabbing; color:var(--ink-soft); }
+  textarea.xl-in{ border:none; border-radius:0; background:transparent; resize:none; font-size:13.5px; line-height:1.5; padding:7px 8px; min-height:35px; overflow:hidden; color:var(--ink); }
+  textarea.xl-in:focus{ background:#F3F8FF; box-shadow:inset 0 0 0 2px var(--seal); }
+  textarea.xl-cat{ flex:none; width:150px; font-weight:600; border-right:1px solid var(--rule); }
+  textarea.xl-content{ flex:1; width:auto; min-width:0; }
+  .xl-status{ flex:none; width:76px; border:none; border-left:1px solid var(--rule); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; background:#fff; color:var(--rule-strong); padding:0 4px; }
+  .xl-status.progress{ background:var(--seal-soft); color:var(--seal); }
+  .xl-status.wait{ background:var(--amber-soft); color:#9A7B00; }
+  .xl-status.plan{ background:var(--plan-soft); color:var(--plan); }
+  .xl-status.done{ background:var(--slate-soft); color:var(--slate); }
+  .xl-del{ flex:none; width:28px; border:none; border-left:1px solid var(--rule); background:#fff; color:var(--ink-soft); cursor:pointer; font-size:11px; opacity:.45; font-family:inherit; padding:0; }
+  .xl-del:hover{ opacity:1; color:var(--danger); }
+  .xl-add{ align-self:flex-start; margin:5px 6px; border:1px dashed var(--rule-strong); background:transparent; border-radius:6px; font-size:12px; padding:4px 10px; cursor:pointer; color:var(--ink-soft); font-family:inherit; }
+  .xl-add:hover{ color:var(--seal); border-color:var(--seal); }
+  .xl-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5; }
+  .xl-results .xl-res{ display:flex; border-bottom:1px solid var(--rule); font-size:13px; cursor:pointer; }
+  .xl-results .xl-res:hover{ background:var(--seal-soft); }
+  .xl-results .xl-res > span{ padding:7px 8px; border-right:1px solid var(--rule); white-space:pre-wrap; word-break:break-word; }
+  .xl-results .xl-res > span:last-child{ border-right:none; }
+  .xl-results .r-date{ flex:none; width:92px; color:var(--ink-soft); }
+  .xl-results mark{ background:#FDE68A; color:inherit; padding:0; }
+  .xl-place-row{ display:flex; align-items:center; gap:6px; padding:6px 0; border-bottom:1px dashed var(--rule); }
+  .xl-place-row input[type=text]{ flex:1; padding:7px 9px; font-size:13.5px; }
+  .xl-place-row button{ border:1px solid var(--rule-strong); background:var(--paper); border-radius:6px; padding:5px 8px; cursor:pointer; font-size:12px; font-family:inherit; }
+  @media (max-width: 640px){
+    .xl-head{ display:none; }
+    .xl-group{ flex-direction:column; }
+    .xl-place{ width:auto; justify-content:flex-start; border-right:none; border-bottom:1px solid var(--rule-strong); padding:6px 10px; }
+    .xl-row{ flex-wrap:wrap; }
+    textarea.xl-cat{ flex:1; width:auto; border-right:none; }
+    textarea.xl-content{ flex:0 0 100%; order:5; border-top:1px dashed var(--rule); }
+    .xl-sheet{ padding:10px; }
+    .xl-results .r-date{ width:70px; }
+  }
 </style>
 </head>
 <body>
@@ -599,7 +685,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v001</span>
+      <span style="font-size:11px;color:#999">v002</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -618,6 +704,28 @@
 </header>
 <main>
 <div id="tabWorklog">
+  <div class="wl-mode-bar">
+    <span>입력 방식</span>
+    <div class="seg" id="viewModeSeg">
+      <button data-m="basic">기본형</button>
+      <button data-m="excel">엑셀형</button>
+    </div>
+  </div>
+  <div id="xlWrap">
+    <div class="xl-top">
+      <input type="text" id="xlSearchInput" placeholder="일지 검색 (제목·내용·매장)">
+      <button class="xl-btn" id="xlSearchBtn">검색</button>
+      <input type="date" id="xlDateJump" title="날짜로 이동">
+      <button class="xl-btn" id="xlCopyBtn">📋 게시용 복사</button>
+      <button class="xl-btn" id="xlExcelBtn">📊 엑셀 저장</button>
+      <button class="xl-btn" id="xlPlacesBtn">🏠 매장 관리</button>
+    </div>
+    <div class="xl-tabs-wrap">
+      <div class="xl-month"><button id="xlPrevMonth" title="이전 달">‹</button><span id="xlMonthLabel"></span><button id="xlNextMonth" title="다음 달">›</button></div>
+      <div class="xl-tabs" id="xlTabs"></div>
+    </div>
+    <div class="xl-sheet" id="xlSheet"></div>
+  </div>
   <div class="add-card">
     <div class="checkin-bar" id="checkinBar" style="display:none;">
       <span id="checkinBarText">☀️ 오늘 첫 업무일지네요 — 반복업무를 자동으로 추가할까요?</span>
@@ -655,6 +763,7 @@
     <div class="status-row" id="statusRow">
       <div class="status-chip" data-v="진행중">진행중</div>
       <div class="status-chip" data-v="대기중">대기중</div>
+      <div class="status-chip" data-v="계획">계획</div>
       <div class="status-chip" data-v="완료">완료</div>
     </div>
     <div class="field">
@@ -856,6 +965,7 @@
     <div class="status-row" id="editStatusRow">
       <div class="status-chip" data-v="진행중">진행중</div>
       <div class="status-chip" data-v="대기중">대기중</div>
+      <div class="status-chip" data-v="계획">계획</div>
       <div class="status-chip" data-v="완료">완료</div>
     </div>
     <div class="field"><input type="text" id="editNote"></div>
@@ -875,6 +985,7 @@
     <div class="status-opt-row">
       <button class="status-opt sp-progress" data-v="진행중">진행중</button>
       <button class="status-opt sp-wait" data-v="대기중">대기중</button>
+      <button class="status-opt sp-plan" data-v="계획">계획</button>
       <button class="status-opt sp-done" data-v="완료">완료</button>
     </div>
     <button class="status-opt sp-clear" data-v="">상태 없음(비우기)</button>
@@ -891,10 +1002,23 @@
     <button class="add-btn" id="nameChangeSaveBtn">저장하기</button>
   </div>
 </div>
+<!-- 엑셀형: 매장 관리 -->
+<div class="overlay center-modal" id="xlPlacesOverlay">
+  <div class="sheet" style="max-width:380px;">
+    <h3>매장 관리 <span class="x" id="xlPlacesClose">닫기 ✕</span></h3>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 10px; line-height:1.5;">이름을 바꾸면 이미 쓴 일지의 매장 이름도 함께 바뀌어요. 삭제해도 이미 쓴 일지는 지워지지 않아요.</p>
+    <div id="xlPlacesList"></div>
+    <div class="add-acct-form">
+      <input type="text" id="xlPlaceNew" placeholder="새 매장 이름 (예: 성수)">
+      <button class="add-btn" id="xlPlaceAddBtn">매장 추가</button>
+    </div>
+  </div>
+</div>
 <!-- Password change modal -->
 <div class="overlay center-modal" id="pwChangeOverlay">
   <div class="sheet" style="max-width:360px;">
     <h3>비밀번호 변경 <span class="x" id="pwChangeClose">닫기 ✕</span></h3>
+    <p id="pwForceNote" style="display:none; font-size:12.5px; line-height:1.5; color:var(--seal); background:var(--seal-soft); border-radius:8px; padding:8px 10px; margin:-4px 0 12px;">처음 로그인하셨어요. 안전을 위해 비밀번호를 새로 바꿔주세요.<br>현재 비밀번호에는 처음 받은 비밀번호를 입력하면 돼요.</p>
     <label class="field-label">현재 비밀번호</label>
     <div class="field"><input type="password" id="pwCurrentInput"></div>
     <label class="field-label">새 비밀번호 (6자 이상)</label>
@@ -927,6 +1051,7 @@
       <div class="role-toggle" id="recurNoteRole">
         <div class="chip" data-v="진행중">진행중</div>
         <div class="chip" data-v="대기중">대기중</div>
+        <div class="chip" data-v="계획">계획</div>
         <div class="chip active" data-v="완료">완료</div>
       </div>
       <button class="add-btn" id="recurAddBtn">반복업무 추가</button>
@@ -993,6 +1118,7 @@ function pingSync(){
 }
 /* ============ State ============ */
 const WEEKDAYS = ['일','월','화','수','목','금','토'];
+const STATUS_LIST = ['진행중','대기중','계획','완료'];
 const DEFAULT_CATS = ['은행거래내역','주문&리뷰','리뷰현황','메일','세금계산서','급여','매출확정','매입현황','거래명세서','4대보험','월결제','자금일보','법인카드','급여신고'];
 let currentUser = null; // {uid, id, role} — 초기화 순서 문제(TDZ) 방지를 위해 최상단에서 선언
 let categories = [...DEFAULT_CATS];
@@ -1264,14 +1390,14 @@ document.getElementById('statusRow').addEventListener('click', (e)=>{
 });
 document.getElementById('noteInput').addEventListener('input', (e)=>{
   const v = e.target.value.trim();
-  selectedStatus = (v==='완료'||v==='진행중'||v==='대기중') ? v : '';
+  selectedStatus = STATUS_LIST.includes(v) ? v : '';
   syncStatusChips();
 });
 function syncStatusChips(){
   [...document.querySelectorAll('#statusRow .status-chip')].forEach(c=>{
-    c.classList.remove('sel-done','sel-progress','sel-wait');
+    c.classList.remove('sel-done','sel-progress','sel-wait','sel-plan');
     if(c.dataset.v === selectedStatus){
-      c.classList.add(selectedStatus==='완료'?'sel-done':selectedStatus==='진행중'?'sel-progress':'sel-wait');
+      c.classList.add('sel-'+noteClass(selectedStatus));
     }
   });
 }
@@ -1287,14 +1413,14 @@ document.getElementById('editStatusRow').addEventListener('click', (e)=>{
 });
 document.getElementById('editNote').addEventListener('input', (e)=>{
   const v = e.target.value.trim();
-  editSelectedStatus = (v==='완료'||v==='진행중'||v==='대기중') ? v : '';
+  editSelectedStatus = STATUS_LIST.includes(v) ? v : '';
   syncEditStatusChips();
 });
 function syncEditStatusChips(){
   [...document.querySelectorAll('#editStatusRow .status-chip')].forEach(c=>{
-    c.classList.remove('sel-done','sel-progress','sel-wait');
+    c.classList.remove('sel-done','sel-progress','sel-wait','sel-plan');
     if(c.dataset.v === editSelectedStatus){
-      c.classList.add(editSelectedStatus==='완료'?'sel-done':editSelectedStatus==='진행중'?'sel-progress':'sel-wait');
+      c.classList.add('sel-'+noteClass(editSelectedStatus));
     }
   });
 }
@@ -1356,6 +1482,7 @@ function startEntriesSync(){
       allEntries.sort((a,b)=> a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
     }
     renderList();
+    renderXl();
     updateCheckinBar();
     autoCarryOverUnfinished();
     renderTeamTodayStat();
@@ -1392,7 +1519,7 @@ async function autoCarryOverUnfinished(){
   const toCopy = allEntries.filter(e=>
     e.date < today && e.date >= cfg.activatedOn &&
     e.ownerUid===currentUser.uid &&
-    (e.note==='진행중' || e.note==='대기중') &&
+    (e.note==='진행중' || e.note==='대기중' || e.note==='계획') &&
     !e.carriedOverDone
   );
   if(!toCopy.length) return;
@@ -1406,6 +1533,7 @@ async function autoCarryOverUnfinished(){
       content: y.content,
       note: y.note,
       dueDate: y.dueDate || '',
+      place: y.place || '',
       ownerUid: currentUser.uid,
       ownerName: currentUser.displayName,
       seq: planSeq(y.note),
@@ -1422,7 +1550,7 @@ async function autoCarryOverUnfinished(){
     carryOverCheckedFor = null; // 실패 시 다음 스냅샷에서 재시도
   }
 }
-/* 새 업무 기본 배치: 진행중(맨 위) → 기타/완료(중간) → 대기중(맨 아래)
+/* 새 업무 기본 배치: 진행중(맨 위) → 계획/기타/완료(중간) → 대기중(맨 아래)
    - 추가 시점에만 위치를 정하고, 이후 드래그로 바꾼 순서는 그대로 유지 */
 function statusRank(note){ return note==='진행중' ? 0 : note==='대기중' ? 2 : 1; }
 function makeSeqPlanner(date, ownerUid){
@@ -1446,7 +1574,7 @@ function sortEntries(list){
   return list.slice().sort((a,b)=> (a.seq||0) - (b.seq||0));
 }
 function noteClass(note){
-  return note==='완료' ? 'done' : note==='진행중' ? 'progress' : note==='대기중' ? 'wait' : '';
+  return note==='완료' ? 'done' : note==='진행중' ? 'progress' : note==='대기중' ? 'wait' : note==='계획' ? 'plan' : '';
 }
 function computeDday(dueDate){
   if(!dueDate) return '';
@@ -1653,7 +1781,7 @@ function renderList(){
       return `
         <div class="entry" data-id="${e.id}">
           ${handle}
-          <span class="cat">${escapeHtml(e.category)}</span>
+          <span class="cat">${e.place ? `<span class="place-tag">${escapeHtml(e.place)}</span>` : ''}${escapeHtml(e.category)}</span>
           <span class="content-line"><span class="content-main">${escapeHtml(e.content)}</span>${inspLine}</span>
           <span class="note-col ${cls}" title="눌러서 상태(비고) 변경">${note ? escapeHtml(note) : ''}${dday ? `<span class="dday">${dday}</span>` : ''}</span>
           <label class="dash-check" title="체크하면 대시보드 같은 날짜에 구분이 떠요"><input type="checkbox" class="dash-check-box" data-id="${e.id}" ${e.onDash?'checked':''}><span class="dash-check-cap">대시</span></label>
@@ -1795,6 +1923,7 @@ async function copyEntryToToday(id){
       inspection: src.inspection || '',
       note: src.note || '',
       dueDate: src.dueDate || '',
+      place: src.place || '',
       ownerUid: src.ownerUid || currentUser.uid,
       ownerName: src.ownerName || currentUser.displayName,
       seq: makeSeqPlanner(today, src.ownerUid || currentUser.uid)(src.note || ''),
@@ -1903,7 +2032,7 @@ function openEdit(id){
   document.getElementById('editInspection').value = e.inspection || '';
   const note = e.note || '';
   document.getElementById('editNote').value = note;
-  editSelectedStatus = (note==='완료'||note==='진행중'||note==='대기중') ? note : '';
+  editSelectedStatus = STATUS_LIST.includes(note) ? note : '';
   syncEditStatusChips();
   document.getElementById('editDueDate').value = e.dueDate || '';
   document.getElementById('editOverlay').classList.add('open');
@@ -2136,6 +2265,7 @@ function teardownSubscriptions(){
   if(unsubProfiles){ unsubProfiles(); unsubProfiles = null; }
   if(unsubLogs){ unsubLogs(); unsubLogs = null; }
   if(unsubRecurring){ unsubRecurring(); unsubRecurring = null; }
+  stopPrefsSync();
   if(unsubDailyCL){ unsubDailyCL(); unsubDailyCL = null; }
   if(unsubMonthlyCL){ unsubMonthlyCL(); unsubMonthlyCL = null; }
   if(unsubTemplates){ unsubTemplates(); unsubTemplates = null; }
@@ -2196,6 +2326,7 @@ function enterApp(){
   startProfilesSync();
   startLogsSync();
   startRecurringSync();
+  startPrefsSync();
   startDailyChecklistSync();
   startMonthlyChecklistSync();
   startTemplatesSync();
@@ -2358,6 +2489,7 @@ document.getElementById('pwChangeSaveBtn').onclick = async ()=>{
     await user.reauthenticateWithCredential(cred);
     await user.updatePassword(next);
     logAction('비밀번호 변경');
+    onPwChanged();
     document.getElementById('pwChangeOverlay').classList.remove('open');
   }catch(e){
     err.textContent = e.code === 'auth/wrong-password' ? '현재 비밀번호가 올바르지 않습니다.' : ('변경 실패: ' + e.message);
@@ -2457,12 +2589,13 @@ function renderTeamTodayStat(){
   const byOwner = new Map();
   todays.forEach(e=>{
     const key = e.ownerName || '(작성자 없음)';
-    if(!byOwner.has(key)) byOwner.set(key, { total:0, done:0, progress:0, wait:0 });
+    if(!byOwner.has(key)) byOwner.set(key, { total:0, done:0, progress:0, wait:0, plan:0 });
     const s = byOwner.get(key);
     s.total++;
     if(e.note==='완료') s.done++;
     else if(e.note==='진행중') s.progress++;
     else if(e.note==='대기중') s.wait++;
+    else if(e.note==='계획') s.plan++;
   });
   if(!byOwner.size){ wrap.innerHTML = '<div class="acct-row">오늘 기록된 업무일지가 없습니다.</div>'; return; }
   wrap.innerHTML = [...byOwner.entries()].map(([name, s])=>`
@@ -2472,6 +2605,7 @@ function renderTeamTodayStat(){
       <span class="pill done">완료 ${s.done}</span>
       <span class="pill progress">진행중 ${s.progress}</span>
       <span class="pill wait">대기중 ${s.wait}</span>
+      <span class="pill plan">계획 ${s.plan}</span>
     </div>`).join('');
 }
 document.getElementById('acctList').addEventListener('click', async (e)=>{
@@ -3541,6 +3675,563 @@ document.getElementById('dashDeleteBtn').onclick = async ()=>{
     p = null;
   });
 })();
+/* ============ 엑셀형 입력 모드 ============ */
+// 계정별 설정은 사용자 본인 문서(workLogApp_recurring_tasks/{uid})에 함께 저장 (기존 쓰기 권한 그대로 사용)
+const EXCEL_DEFAULT_IDS = ['imgoodbab'];   // 처음 로그인하면 엑셀형으로 열리는 계정
+const INITIAL_PW_IDS = ['imgoodbab'];      // 초기 비밀번호로 만든 계정 → 첫 로그인 때 비밀번호 변경
+const DEFAULT_PLACES = ['인사동','북촌'];
+let userPrefs = null;          // Firestore에서 받은 설정 (없으면 null)
+let unsubPrefs = null;
+let viewMode = 'basic';
+let xlDate = todayStr();
+let xlSearch = '';
+let xlDrafts = [];             // 아직 저장 안 된 새 줄 [{key, place}]
+let xlPendingRender = false;
+let pwForced = false;
+let xlDragging = null;
+let xlPointerDown = false;
+function xlPlaces(){
+  return (userPrefs && Array.isArray(userPrefs.places) && userPrefs.places.length) ? userPrefs.places : DEFAULT_PLACES;
+}
+function savePrefs(patch){
+  if(!currentUser) return Promise.resolve();
+  userPrefs = Object.assign({}, userPrefs || {}, patch);
+  return RECURRING.doc(currentUser.uid).set(patch, {merge:true}).catch(err=>{ console.error('설정 저장 실패', err); });
+}
+function startPrefsSync(){
+  if(unsubPrefs || !currentUser) return;
+  try{ const cached = localStorage.getItem('wl_viewMode_'+currentUser.uid); if(cached) applyViewMode(cached); }catch(e){}
+  if(!localStorageHasMode()) applyViewMode(EXCEL_DEFAULT_IDS.includes((currentUser.id||'').toLowerCase()) ? 'excel' : 'basic');
+  unsubPrefs = RECURRING.doc(currentUser.uid).onSnapshot(doc=>{
+    userPrefs = doc.exists ? doc.data() : {};
+    const id = (currentUser.id||'').toLowerCase();
+    const mode = userPrefs.viewMode || (EXCEL_DEFAULT_IDS.includes(id) ? 'excel' : 'basic');
+    applyViewMode(mode);
+    if(INITIAL_PW_IDS.includes(id) && !userPrefs.pwChangedAt && !pwForced) openForcedPwChange();
+    renderXl();
+  }, ()=>{});
+}
+function localStorageHasMode(){
+  try{ return !!localStorage.getItem('wl_viewMode_'+currentUser.uid); }catch(e){ return false; }
+}
+function stopPrefsSync(){
+  if(unsubPrefs){ unsubPrefs(); unsubPrefs = null; }
+  userPrefs = null; xlDrafts = []; xlSearch = ''; pwForced = false;
+}
+function applyViewMode(mode){
+  viewMode = mode === 'excel' ? 'excel' : 'basic';
+  document.getElementById('tabWorklog').classList.toggle('xl-mode', viewMode==='excel');
+  [...document.querySelectorAll('#viewModeSeg button')].forEach(b=> b.classList.toggle('active', b.dataset.m===viewMode));
+  try{ if(currentUser) localStorage.setItem('wl_viewMode_'+currentUser.uid, viewMode); }catch(e){}
+  if(viewMode==='excel') renderXl(); else { renderList(); }
+}
+document.getElementById('viewModeSeg').addEventListener('click', (e)=>{
+  const b = e.target.closest('button[data-m]');
+  if(!b || b.dataset.m === viewMode) return;
+  applyViewMode(b.dataset.m);
+  savePrefs({ viewMode: b.dataset.m });
+});
+/* ---- 첫 로그인 비밀번호 변경 ---- */
+function openForcedPwChange(){
+  pwForced = true;
+  document.getElementById('pwCurrentInput').value = '';
+  document.getElementById('pwNewInput').value = '';
+  document.getElementById('pwNewInput2').value = '';
+  document.getElementById('pwChangeErr').textContent = '';
+  document.getElementById('pwForceNote').style.display = 'block';
+  document.getElementById('pwChangeClose').style.display = 'none';
+  document.getElementById('pwChangeOverlay').classList.add('open');
+}
+function onPwChanged(){
+  document.getElementById('pwForceNote').style.display = 'none';
+  document.getElementById('pwChangeClose').style.display = '';
+  if(pwForced || (currentUser && INITIAL_PW_IDS.includes((currentUser.id||'').toLowerCase()))) savePrefs({ pwChangedAt: Date.now() });
+  pwForced = false;
+}
+/* ---- 그리기 ---- */
+function xlMine(){
+  return allEntries.filter(e=> currentUser && e.ownerUid === currentUser.uid);
+}
+function xlDateLabel(d){
+  const {month, day, wd} = fmtLabel(d);
+  return `${String(month).padStart(2,'0')}.${String(day).padStart(2,'0')}(${wd})`;
+}
+function xlGroups(dayEntries){
+  const places = xlPlaces();
+  const keys = places.slice();
+  dayEntries.forEach(e=>{ const p = e.place || ''; if(p && !keys.includes(p)) keys.push(p); });
+  const hasNone = dayEntries.some(e=> !e.place);
+  if(hasNone) keys.push('');
+  return keys.map(k=>({ place:k, entries: dayEntries.filter(e=> (e.place||'') === k) }));
+}
+function xlRowHtml(e, draft){
+  const note = e ? (e.note||'') : '';
+  const cls = noteClass(note);
+  const idAttr = e ? `data-id="${e.id}"` : `data-draft="${draft.key}"`;
+  return `<div class="xl-row" ${idAttr}>
+    <span class="xl-handle" title="드래그해서 순서·매장 변경">⠿</span>
+    <textarea class="xl-in xl-cat" data-f="category" rows="1" placeholder="제목">${e ? escapeHtml(e.category||'') : ''}</textarea>
+    <textarea class="xl-in xl-content" data-f="content" rows="1" placeholder="내용">${e ? escapeHtml(e.content||'') : ''}</textarea>
+    <button class="xl-status ${cls}" title="눌러서 상태 선택">${note ? escapeHtml(note) : '선택'}</button>
+    <button class="xl-del" tabindex="-1" title="이 줄 삭제">✕</button>
+  </div>`;
+}
+function renderXl(force){
+  if(viewMode !== 'excel' || !currentUser) return;
+  const sheet = document.getElementById('xlSheet');
+  const ae = document.activeElement;
+  if(!force && ae && ae.classList && ae.classList.contains('xl-in') && sheet.contains(ae)){ xlPendingRender = true; return; }
+  if(xlDragging) { xlPendingRender = true; return; }
+  xlPendingRender = false;
+  const mine = xlMine();
+  // 날짜 탭 (선택한 날짜의 달)
+  const month = xlDate.slice(0,7);
+  const {year, month: mm} = fmtLabel(xlDate);
+  document.getElementById('xlMonthLabel').textContent = `${year}.${String(mm).padStart(2,'0')}`;
+  const today = todayStr();
+  const dset = new Set(mine.filter(e=>e.date.slice(0,7)===month).map(e=>e.date));
+  dset.add(xlDate);
+  if(today.slice(0,7)===month) dset.add(today);
+  const dates = [...dset].sort();
+  const tabs = document.getElementById('xlTabs');
+  tabs.innerHTML = dates.map(d=>`<button class="xl-tab ${d===xlDate && !xlSearch?'active':''} ${d===today?'today':''}" data-d="${d}">${xlDateLabel(d)}</button>`).join('')
+    + (dset.has(today) && month===today.slice(0,7) ? '' : `<button class="xl-tab add" data-d="${today}">+ 오늘</button>`);
+  const act = tabs.querySelector('.xl-tab.active');
+  if(act) tabs.scrollLeft = Math.max(0, act.offsetLeft - tabs.clientWidth + act.offsetWidth + 40);
+  document.getElementById('xlDateJump').value = xlDate;
+  if(xlSearch){ renderXlSearch(mine); return; }
+  // 시트
+  const {day, wd} = fmtLabel(xlDate);
+  const dayEntries = sortEntries(mine.filter(e=>e.date===xlDate));
+  const groups = xlGroups(dayEntries);
+  sheet.innerHTML = `
+    <div class="xl-title">${year}년 ${mm}월 ${day}일 ${wd}요일 ${xlDate===today?'<small>오늘</small>':''}</div>
+    <div class="xl-table">
+      <div class="xl-head"><span class="xl-w-place">매장</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
+      ${groups.map(g=>`
+        <div class="xl-group">
+          <div class="xl-place ${g.place?'':'etc'}">${g.place ? escapeHtml(g.place) : '기타'}</div>
+          <div class="xl-col">
+            <div class="xl-rows" data-place="${escapeHtml(g.place)}">
+              ${g.entries.map(e=>xlRowHtml(e)).join('')}
+              ${xlDrafts.filter(d=>d.place===g.place).map(d=>xlRowHtml(null, d)).join('')}
+            </div>
+            <button class="xl-add" data-place="${escapeHtml(g.place)}">+ 추가</button>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="xl-hint">칸을 눌러 바로 입력하면 자동 저장돼요 · Enter: 아래 칸 · Shift+Enter: 줄바꿈 · ⠿ 를 끌어서 순서·매장 변경</div>`;
+  sheet.querySelectorAll('textarea.xl-in').forEach(xlAutoGrow);
+}
+function renderXlSearch(mine){
+  const q = xlSearch.toLowerCase();
+  const hits = mine.filter(e=> ['category','content','place','note'].some(f=> (e[f]||'').toLowerCase().includes(q)))
+    .sort((a,b)=> a.date<b.date?1:a.date>b.date?-1:(a.seq||0)-(b.seq||0));
+  const hl = (t)=>{
+    const s = escapeHtml(t||'');
+    const qe = escapeHtml(xlSearch).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    return qe ? s.replace(new RegExp(qe,'gi'), m=>`<mark>${m}</mark>`) : s;
+  };
+  document.getElementById('xlSheet').innerHTML = `
+    <div class="xl-title">'${escapeHtml(xlSearch)}' 검색결과 <small>${hits.length}건</small>
+      <button class="xl-btn" id="xlSearchClose" style="margin-left:auto;">검색 닫기</button></div>
+    <div class="xl-table xl-results">
+      <div class="xl-head"><span class="r-date" style="flex:none;width:92px;">날짜</span><span class="xl-w-place">매장</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
+      ${hits.length ? hits.map(e=>`
+        <div class="xl-res" data-d="${e.date}">
+          <span class="r-date">${xlDateLabel(e.date)}</span>
+          <span class="xl-w-place">${hl(e.place)}</span>
+          <span class="xl-w-cat" style="font-weight:600;">${hl(e.category)}</span>
+          <span class="xl-w-content">${hl(e.content)}</span>
+          <span class="xl-w-status">${escapeHtml(e.note||'')}</span>
+        </div>`).join('') : '<div style="padding:16px; color:var(--ink-soft); font-size:13px;">검색 결과가 없습니다.</div>'}
+    </div>`;
+}
+function xlAutoGrow(t){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function xlGoDate(d){
+  if(!d) return;
+  if(d !== xlDate) xlDrafts = [];
+  xlDate = d; xlSearch = '';
+  document.getElementById('xlSearchInput').value = '';
+  renderXl(true);
+}
+document.getElementById('xlTabs').addEventListener('click', (e)=>{
+  const b = e.target.closest('.xl-tab'); if(b) xlGoDate(b.dataset.d);
+});
+function xlShiftMonth(delta){
+  const [y,m] = xlDate.slice(0,7).split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  const has = xlMine().filter(e=>e.date.slice(0,7)===ym).map(e=>e.date).sort();
+  xlGoDate(ym === todayStr().slice(0,7) ? todayStr() : (has.length ? has[has.length-1] : ym+'-01'));
+}
+document.getElementById('xlPrevMonth').onclick = ()=> xlShiftMonth(-1);
+document.getElementById('xlNextMonth').onclick = ()=> xlShiftMonth(1);
+document.getElementById('xlDateJump').onchange = (e)=> xlGoDate(e.target.value);
+function xlDoSearch(){
+  const q = document.getElementById('xlSearchInput').value.trim();
+  xlSearch = q; renderXl(true);
+}
+document.getElementById('xlSearchBtn').onclick = xlDoSearch;
+document.getElementById('xlSearchInput').addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.isComposing) xlDoSearch(); });
+/* ---- 입력·저장 ---- */
+function xlSeqForPlace(place){
+  const same = sortEntries(xlMine().filter(e=>e.date===xlDate)).filter(e=>(e.place||'')===place);
+  const all = sortEntries(xlMine().filter(e=>e.date===xlDate));
+  if(!same.length) return Math.max(Date.now(), all.length ? (all[all.length-1].seq||0)+1 : 0);
+  const last = same[same.length-1];
+  const idx = all.indexOf(last);
+  const next = all[idx+1];
+  return next ? ((last.seq||0) + (next.seq||0)) / 2 : Math.max((last.seq||0)+1, Date.now());
+}
+function xlCreateFromDraft(row, extra){
+  const key = row.dataset.draft;
+  const draft = xlDrafts.find(d=>d.key===key);
+  const place = draft ? draft.place : (row.closest('.xl-rows')?.dataset.place || '');
+  const ref = ENTRIES.doc();
+  row.removeAttribute('data-draft');
+  row.dataset.id = ref.id;
+  xlDrafts = xlDrafts.filter(d=>d.key!==key);
+  const data = Object.assign({
+    date: xlDate,
+    category: row.querySelector('[data-f=category]').value.trim(),
+    content: row.querySelector('[data-f=content]').value.trim(),
+    inspection: '', note: '', dueDate: '',
+    place,
+    ownerUid: currentUser.uid,
+    ownerName: currentUser.displayName,
+    seq: xlSeqForPlace(place),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, extra || {});
+  allEntries.push(Object.assign({ id: ref.id }, data)); // 서버 응답 전에도 화면에 바로 보이도록
+  ref.set(data).then(()=> logAction('업무일지 추가(엑셀형)', `${xlDate} ${data.place} ${data.category}`))
+    .catch(err=> alert('저장 실패: ' + err.message));
+  return ref.id;
+}
+function xlSaveCell(t){
+  const row = t.closest('.xl-row'); if(!row) return;
+  const f = t.dataset.f; const v = t.value.replace(/\s+$/,'');
+  if(row.dataset.id){
+    const en = allEntries.find(x=>x.id===row.dataset.id);
+    if(en && (en[f]||'') === v) return;
+    if(en) en[f] = v;
+    ENTRIES.doc(row.dataset.id).update({ [f]: v }).catch(err=> alert('저장 실패: ' + err.message));
+  } else if(row.dataset.draft){
+    const cat = row.querySelector('[data-f=category]').value.trim();
+    const con = row.querySelector('[data-f=content]').value.trim();
+    if(cat || con) xlCreateFromDraft(row);
+  }
+}
+const xlSheetEl = document.getElementById('xlSheet');
+xlSheetEl.addEventListener('input', (e)=>{ if(e.target.classList.contains('xl-in')) xlAutoGrow(e.target); });
+xlSheetEl.addEventListener('focusout', (e)=>{
+  if(!e.target.classList.contains('xl-in')) return;
+  xlSaveCell(e.target);
+  setTimeout(()=>{
+    const ae = document.activeElement;
+    if(xlPendingRender && !xlPointerDown && !(ae && ae.classList && ae.classList.contains('xl-in'))) renderXl();
+  }, 0);
+});
+// 버튼을 누르는 도중에 화면이 다시 그려져 클릭이 사라지지 않도록, 손을 뗀 뒤에 다시 그림
+document.addEventListener('pointerdown', ()=>{ xlPointerDown = true; }, true);
+document.addEventListener('pointerup', ()=>{
+  xlPointerDown = false;
+  setTimeout(()=>{
+    const ae = document.activeElement;
+    if(xlPendingRender && !(ae && ae.classList && ae.classList.contains('xl-in'))) renderXl();
+  }, 30);
+}, true);
+function xlFocus(row, f){
+  const t = row && row.querySelector(`[data-f=${f}]`);
+  if(t){ t.focus(); const n = t.value.length; t.setSelectionRange(n, n); }
+}
+function xlAddDraft(place, focusField){
+  const key = 'd' + Date.now() + Math.random().toString(36).slice(2,6);
+  xlDrafts.push({ key, place });
+  renderXl(true);
+  const row = xlSheetEl.querySelector(`.xl-row[data-draft="${key}"]`);
+  xlFocus(row, focusField || 'category');
+}
+xlSheetEl.addEventListener('keydown', (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('xl-in') || e.key !== 'Enter' || e.isComposing) return;
+  if(e.shiftKey) return; // 줄바꿈
+  e.preventDefault();
+  if(e.altKey || e.ctrlKey){ // Alt+Enter 도 줄바꿈 (엑셀과 동일)
+    const s = t.selectionStart, en = t.selectionEnd;
+    t.value = t.value.slice(0,s) + '\n' + t.value.slice(en);
+    t.setSelectionRange(s+1, s+1); xlAutoGrow(t); return;
+  }
+  const row = t.closest('.xl-row');
+  const next = row.nextElementSibling;
+  if(next && next.classList.contains('xl-row')){ xlFocus(next, t.dataset.f); return; }
+  const hasText = [...row.querySelectorAll('.xl-in')].some(x=>x.value.trim());
+  if(hasText){
+    const place = row.closest('.xl-rows').dataset.place;
+    t.blur();
+    xlAddDraft(place, t.dataset.f === 'content' ? 'category' : t.dataset.f);
+  }
+});
+xlSheetEl.addEventListener('click', async (e)=>{
+  if(e.target.id === 'xlSearchClose'){ xlSearch=''; document.getElementById('xlSearchInput').value=''; renderXl(true); return; }
+  const res = e.target.closest('.xl-res');
+  if(res){ xlGoDate(res.dataset.d); return; }
+  const add = e.target.closest('.xl-add');
+  if(add){ xlAddDraft(add.dataset.place); return; }
+  const st = e.target.closest('.xl-status');
+  if(st){
+    const row = st.closest('.xl-row');
+    let id = row.dataset.id;
+    if(!id){ id = xlCreateFromDraft(row); }
+    openStatusPopup(id);
+    return;
+  }
+  const del = e.target.closest('.xl-del');
+  if(del){
+    const row = del.closest('.xl-row');
+    if(row.dataset.draft){ xlDrafts = xlDrafts.filter(d=>d.key!==row.dataset.draft); renderXl(true); return; }
+    const en = allEntries.find(x=>x.id===row.dataset.id);
+    if(!await customConfirm(`'${(en && en.category) || '이 줄'}' 을(를) 삭제할까요?`)) return;
+    try{ await ENTRIES.doc(row.dataset.id).delete(); logAction('업무일지 삭제(엑셀형)', `${xlDate} ${(en&&en.category)||''}`); }
+    catch(err){ alert('삭제 실패: ' + err.message); }
+  }
+});
+/* ---- 드래그로 순서·매장 변경 (마우스·터치 공통) ---- */
+xlSheetEl.addEventListener('pointerdown', (e)=>{
+  const h = e.target.closest('.xl-handle'); if(!h) return;
+  const row = h.closest('.xl-row'); if(!row) return;
+  e.preventDefault();
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  xlDragging = { row, pointerId: e.pointerId };
+  row.classList.add('dragging');
+  document.body.style.userSelect = 'none';
+  try{ h.setPointerCapture(e.pointerId); }catch(err){}
+});
+xlSheetEl.addEventListener('pointermove', (e)=>{
+  if(!xlDragging) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  if(!el) return;
+  xlSheetEl.querySelectorAll('.xl-rows.drop-target').forEach(x=>x.classList.remove('drop-target'));
+  const over = el.closest('.xl-row');
+  const drag = xlDragging.row;
+  if(over && over !== drag && xlSheetEl.contains(over)){
+    const r = over.getBoundingClientRect();
+    const before = e.clientY < r.top + r.height/2;
+    over.parentNode.insertBefore(drag, before ? over : over.nextSibling);
+    return;
+  }
+  const group = el.closest('.xl-group');
+  const rows = group && group.querySelector('.xl-rows');
+  if(rows && !rows.contains(drag)){
+    rows.classList.add('drop-target');
+    const firstDraft = rows.querySelector('.xl-row[data-draft]');
+    rows.insertBefore(drag, firstDraft);
+  }
+});
+async function xlEndDrag(){
+  if(!xlDragging) return;
+  const drag = xlDragging.row;
+  drag.classList.remove('dragging');
+  document.body.style.userSelect = '';
+  xlSheetEl.querySelectorAll('.xl-rows.drop-target').forEach(x=>x.classList.remove('drop-target'));
+  xlDragging = null;
+  if(drag.dataset.draft){
+    const d = xlDrafts.find(x=>x.key===drag.dataset.draft);
+    if(d) d.place = drag.closest('.xl-rows').dataset.place;
+  }
+  const rows = [...xlSheetEl.querySelectorAll('.xl-rows .xl-row[data-id]')];
+  const base = Date.now() - rows.length;
+  const batch = db.batch();
+  let changed = 0;
+  rows.forEach((row, idx)=>{
+    const en = allEntries.find(x=>x.id===row.dataset.id);
+    const place = row.closest('.xl-rows').dataset.place;
+    const seq = base + idx;
+    if(!en) return;
+    en.seq = seq; en.place = place;
+    batch.update(ENTRIES.doc(row.dataset.id), { seq, place });
+    changed++;
+  });
+  if(changed){
+    try{ await batch.commit(); logAction('업무일지 순서 변경(엑셀형)', xlDate); }
+    catch(err){ console.error('순서 저장 실패', err); }
+  }
+  renderXl(true);
+}
+xlSheetEl.addEventListener('pointerup', xlEndDrag);
+xlSheetEl.addEventListener('pointercancel', xlEndDrag);
+/* ---- 매장 관리 ---- */
+function renderXlPlaces(){
+  const list = xlPlaces();
+  document.getElementById('xlPlacesList').innerHTML = list.map((p,i)=>`
+    <div class="xl-place-row" data-i="${i}">
+      <input type="text" value="${escapeHtml(p)}" data-old="${escapeHtml(p)}" maxlength="20">
+      <button data-a="up" ${i===0?'disabled':''}>▲</button>
+      <button data-a="down" ${i===list.length-1?'disabled':''}>▼</button>
+      <button data-a="del" style="color:var(--danger);">삭제</button>
+    </div>`).join('');
+}
+document.getElementById('xlPlacesBtn').onclick = ()=>{ renderXlPlaces(); document.getElementById('xlPlacesOverlay').classList.add('open'); };
+document.getElementById('xlPlacesClose').onclick = ()=> document.getElementById('xlPlacesOverlay').classList.remove('open');
+document.getElementById('xlPlacesOverlay').addEventListener('click', async (e)=>{
+  if(e.target.id === 'xlPlacesOverlay'){ e.currentTarget.classList.remove('open'); return; }
+  const b = e.target.closest('.xl-place-row button'); if(!b) return;
+  const i = Number(b.closest('.xl-place-row').dataset.i);
+  const list = xlPlaces().slice();
+  if(b.dataset.a === 'up' && i>0){ [list[i-1], list[i]] = [list[i], list[i-1]]; }
+  else if(b.dataset.a === 'down' && i<list.length-1){ [list[i+1], list[i]] = [list[i], list[i+1]]; }
+  else if(b.dataset.a === 'del'){
+    if(list.length <= 1){ alert('매장은 최소 1개는 있어야 해요.'); return; }
+    if(!await customConfirm(`'${list[i]}' 매장을 목록에서 뺄까요? (이미 쓴 일지는 그대로 남아요)`)) return;
+    list.splice(i,1);
+  } else return;
+  await savePrefs({ places: list });
+  renderXlPlaces(); renderXl(true);
+});
+document.getElementById('xlPlacesOverlay').addEventListener('change', async (e)=>{
+  const inp = e.target.closest('.xl-place-row input'); if(!inp) return;
+  const oldName = inp.dataset.old; const newName = inp.value.trim();
+  if(!newName || newName === oldName){ inp.value = oldName; return; }
+  const list = xlPlaces().slice();
+  if(list.includes(newName)){ alert('이미 있는 매장 이름이에요.'); inp.value = oldName; return; }
+  list[list.indexOf(oldName)] = newName;
+  await savePrefs({ places: list });
+  // 이미 쓴 내 일지의 매장 이름도 함께 변경 (500건씩 나눠서)
+  const targets = xlMine().filter(x=> x.place === oldName);
+  for(let k=0; k<targets.length; k+=400){
+    const batch = db.batch();
+    targets.slice(k, k+400).forEach(x=>{ x.place = newName; batch.update(ENTRIES.doc(x.id), { place: newName }); });
+    try{ await batch.commit(); }catch(err){ alert('일지 매장 이름 변경 실패: ' + err.message); break; }
+  }
+  logAction('매장 이름 변경', `${oldName} → ${newName}`);
+  renderXlPlaces(); renderXl(true);
+});
+document.getElementById('xlPlaceAddBtn').onclick = async ()=>{
+  const inp = document.getElementById('xlPlaceNew');
+  const name = inp.value.trim(); if(!name) return;
+  const list = xlPlaces().slice();
+  if(list.includes(name)){ alert('이미 있는 매장 이름이에요.'); return; }
+  list.push(name);
+  await savePrefs({ places: list });
+  inp.value = '';
+  renderXlPlaces(); renderXl(true);
+};
+document.getElementById('xlPlaceNew').addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.isComposing) document.getElementById('xlPlaceAddBtn').click(); });
+/* ---- 게시용 복사 (게시판에 붙여넣으면 표 그대로) ---- */
+const XL_STATUS_STYLE = {
+  '진행중': ['#DBEAFE','#2563EB'], '대기중': ['#FEF3C7','#9A7B00'],
+  '계획': ['#EDE9FE','#7C3AED'], '완료': ['#DCFCE7','#15803D']
+};
+function xlDayRows(d){
+  return xlGroups(sortEntries(xlMine().filter(e=>e.date===d))).filter(g=>g.entries.length);
+}
+function xlBuildPostHtml(d){
+  const {year, month, day, wd} = fmtLabel(d);
+  const groups = xlDayRows(d);
+  const td = 'border:1px solid #CBD2D9; padding:6px 10px; font-size:14px; vertical-align:middle;';
+  const th = td + 'background:#F3F4F6; font-weight:bold; text-align:left;';
+  const nl = (t)=> escapeHtml(t||'').replace(/\n/g,'<br>');
+  let rows = '';
+  groups.forEach(g=>{
+    g.entries.forEach((e,i)=>{
+      const st = XL_STATUS_STYLE[e.note] || ['#FFFFFF','#1F2328'];
+      rows += '<tr>'
+        + (i===0 ? `<td rowspan="${g.entries.length}" style="${td} font-weight:bold; text-align:center; background:#FAFAFB;">${g.place ? escapeHtml(g.place) : '기타'}</td>` : '')
+        + `<td style="${td}">${nl(e.category)}</td>`
+        + `<td style="${td}">${nl(e.content)}</td>`
+        + `<td style="${td} text-align:center; background:${st[0]}; color:${st[1]}; white-space:nowrap;">${escapeHtml(e.note||'')}</td>`
+        + '</tr>';
+    });
+  });
+  return `<p style="font-size:15px; margin:0 0 8px;"><b>${year}년 ${month}월 ${day}일 ${wd}요일</b></p>`
+    + `<table style="border-collapse:collapse; width:100%;"><thead><tr>`
+    + `<th style="${th} width:80px; text-align:center;">매장</th><th style="${th} width:140px;">제목</th><th style="${th}">내용</th><th style="${th} width:70px; text-align:center;">상태</th>`
+    + `</tr></thead><tbody>${rows}</tbody></table>`;
+}
+function xlBuildPostText(d){
+  const {year, month, day, wd} = fmtLabel(d);
+  const lines = [`${year}년 ${month}월 ${day}일 ${wd}요일`, ['매장','제목','내용','상태'].join('\t')];
+  xlDayRows(d).forEach(g=> g.entries.forEach(e=> lines.push([g.place||'기타', e.category||'', (e.content||'').replace(/\n/g,' '), e.note||''].join('\t'))));
+  return lines.join('\n');
+}
+document.getElementById('xlCopyBtn').onclick = async ()=>{
+  const d = xlDate;
+  if(!xlMine().some(e=>e.date===d)){ alert('이 날짜에 쓴 일지가 없어요.'); return; }
+  const html = xlBuildPostHtml(d), text = xlBuildPostText(d);
+  let ok = false;
+  try{
+    if(navigator.clipboard && window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], {type:'text/html'}),
+        'text/plain': new Blob([text], {type:'text/plain'})
+      })]);
+      ok = true;
+    }
+  }catch(err){ ok = false; }
+  if(!ok){
+    const box = document.createElement('div');
+    box.contentEditable = 'true';
+    box.style.cssText = 'position:fixed; left:-9999px; top:0;';
+    box.innerHTML = html;
+    document.body.appendChild(box);
+    const range = document.createRange(); range.selectNodeContents(box);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    try{ ok = document.execCommand('copy'); }catch(err){ ok = false; }
+    sel.removeAllRanges(); box.remove();
+  }
+  if(ok){ showToast('표로 복사됐어요 — 게시판 글쓰기에 붙여넣기(Ctrl+V) 하세요'); logAction('업무일지 게시용 복사', d); }
+  else alert('복사에 실패했어요. 다른 브라우저(크롬)에서 다시 시도해주세요.');
+};
+/* ---- 엑셀 저장: 그 달 일지를 하루에 시트 하나씩 ---- */
+document.getElementById('xlExcelBtn').onclick = ()=>{
+  if(typeof XLSX === 'undefined' || !XLSX.utils){ alert('엑셀 기능을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+  const month = xlDate.slice(0,7);
+  const dates = [...new Set(xlMine().filter(e=>e.date.slice(0,7)===month).map(e=>e.date))].sort();
+  if(!dates.length){ alert('이 달에 쓴 일지가 없어요.'); return; }
+  try{
+    const wb = XLSX.utils.book_new();
+    const thin = {style:'thin', color:{rgb:'CBD2D9'}};
+    const border = {top:thin,bottom:thin,left:thin,right:thin};
+    const font = (o)=> Object.assign({name:'맑은 고딕', sz:10.5, color:{rgb:'1F2328'}}, o||{});
+    dates.forEach(d=>{
+      const {year, month: m, day, wd} = fmtLabel(d);
+      const aoa = [[`${year}년 ${m}월 ${day}일 ${wd}요일`,'','',''], ['매장','제목','내용','상태']];
+      const merges = [{s:{r:0,c:0}, e:{r:0,c:3}}];
+      const statusRows = [];
+      xlDayRows(d).forEach(g=>{
+        const start = aoa.length;
+        g.entries.forEach((e,i)=>{
+          aoa.push([i===0 ? (g.place||'기타') : '', e.category||'', e.content||'', e.note||'']);
+          statusRows.push({ r: aoa.length-1, note: e.note||'' });
+        });
+        if(g.entries.length > 1) merges.push({s:{r:start,c:0}, e:{r:aoa.length-1,c:0}});
+      });
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [{wch:10},{wch:20},{wch:60},{wch:9}];
+      ws['!merges'] = merges;
+      ws['!rows'] = aoa.map((r,i)=> i===0 ? {hpt:24} : i===1 ? {hpt:20} : {hpt: Math.max(20, 15 * Math.max(1, Math.ceil(String(r[2]).length/38) + (String(r[2]).match(/\n/g)||[]).length))});
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for(let R=0; R<=range.e.r; R++){
+        for(let C=0; C<=3; C++){
+          const addr = XLSX.utils.encode_cell({r:R,c:C});
+          const cell = ws[addr] || (ws[addr] = {t:'s', v:''});
+          if(R===0){ cell.s = { font: font({sz:13, bold:true}), alignment:{vertical:'center'} }; continue; }
+          if(R===1){ cell.s = { font: font({bold:true}), fill:{fgColor:{rgb:'F3F4F6'}}, border, alignment:{vertical:'center', horizontal: C===0||C===3 ? 'center':'left'} }; continue; }
+          let s = { font: font(C===0||C===1 ? {bold:true} : {}), border, alignment:{vertical:'center', horizontal: C===0||C===3 ? 'center':'left', wrapText:true} };
+          if(C===0) s.fill = {fgColor:{rgb:'FAFAFB'}};
+          if(C===3){
+            const st = XL_STATUS_STYLE[cell.v];
+            if(st){ s.fill = {fgColor:{rgb: st[0].slice(1)}}; s.font = font({bold:true, color:{rgb: st[1].slice(1)}}); }
+          }
+          cell.s = s;
+        }
+      }
+      XLSX.utils.book_append_sheet(wb, ws, `${String(m).padStart(2,'0')}.${String(day).padStart(2,'0')}(${wd})`);
+    });
+    XLSX.writeFile(wb, `업무일지_${month}.xlsx`);
+    logAction('업무일지 엑셀 저장(엑셀형)', month);
+  }catch(err){ alert('엑셀 생성 실패: ' + err.message); }
+};
 /* ============ Boot ============ */
 ensureBootstrapAdmin().finally(()=>{
   bootstrapping = false;
