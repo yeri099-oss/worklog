@@ -577,11 +577,16 @@
   .xl-top input[type=date]{ width:auto; padding:6px 8px; font-size:13px; }
   .xl-btn{ border:1px solid var(--rule-strong); background:var(--paper); border-radius:8px; padding:7px 11px; font-size:12.5px; cursor:pointer; font-family:inherit; color:var(--ink); white-space:nowrap; }
   .xl-btn.primary{ background:var(--ink); color:#fff; border-color:var(--ink); }
-  .xl-tabs-wrap{ display:flex; align-items:flex-end; gap:6px; border-bottom:2px solid var(--ink); }
+  .xl-tabs-wrap{ display:flex; align-items:flex-end; gap:8px; border-bottom:2px solid var(--ink); }
   .xl-month{ flex:none; display:flex; align-items:center; font-size:12.5px; font-weight:700; padding-bottom:4px; }
   .xl-month button{ border:none; background:none; cursor:pointer; font-size:17px; padding:0 6px; color:var(--ink-soft); font-family:inherit; }
-  .xl-tabs{ display:flex; gap:2px; overflow-x:auto; flex:1; min-width:0; scrollbar-width:thin; }
-  .xl-tab{ flex:none; border:1px solid var(--rule-strong); border-bottom:none; background:var(--slate-soft); padding:6px 10px; font-size:12px; border-radius:7px 7px 0 0; cursor:pointer; font-family:inherit; color:var(--ink-soft); white-space:nowrap; }
+  .xl-tabs{ display:flex; flex-wrap:wrap; gap:3px 2px; flex:1; min-width:0; }  /* 날짜가 많아지면 스크롤 대신 줄바꿈 */
+  .xl-tab{ flex:none; border:1px solid var(--rule-strong); border-bottom:none; background:var(--slate-soft); padding:6px 10px; font-size:12px; border-radius:7px 7px 0 0; cursor:pointer; font-family:inherit; color:var(--ink-soft); white-space:nowrap; min-width:52px; }
+  .xl-month button.xl-today{ margin-left:6px; font-size:12px; padding:3px 11px; color:var(--ink-soft); }
+  .xl-month button.xl-today.on{ color:#fff; }
+  .xl-today{ margin-left:6px; border:1px solid var(--rule-strong); background:#fff; color:var(--ink-soft); border-radius:999px; padding:3px 11px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .xl-today.on{ background:var(--seal); border-color:var(--seal); color:#fff; }
+  .xl-btn.danger{ background:var(--danger); border-color:var(--danger); color:#fff; font-weight:700; }
   .xl-tab.active{ background:var(--ink); color:#fff; border-color:var(--ink); font-weight:700; }
   .xl-tab.today:not(.active){ color:var(--seal); font-weight:700; }
   .xl-tab.add{ background:#fff; border-style:dashed; color:var(--seal); font-weight:700; }
@@ -593,8 +598,8 @@
   .xl-head span{ padding:7px 8px; border-right:1px solid var(--rule-strong); }
   .xl-head span:last-child{ border-right:none; }
   .xl-w-place{ flex:none; width:84px; }
-  .xl-w-cat{ flex:none; width:172px; }
-  .xl-w-content{ flex:1; min-width:0; }
+  .xl-w-cat{ flex:none; width:calc(var(--xl-catw, 150px) + 22px); }
+  .xl-w-content{ flex:1 1 auto; width:var(--xl-cw, 300px); min-width:0; }
   .xl-w-status{ flex:none; width:104px; text-align:center; }
   .xl-group{ display:flex; border-bottom:1px solid var(--rule-strong); }
   .xl-place{ flex:none; width:84px; padding:8px; font-weight:700; font-size:13px; border-right:1px solid var(--rule-strong); display:flex; align-items:center; justify-content:center; text-align:center; background:#FAFAFB; word-break:keep-all; }
@@ -608,8 +613,19 @@
   .xl-handle:active{ cursor:grabbing; color:var(--ink-soft); }
   textarea.xl-in{ border:none; border-radius:0; background:transparent; resize:none; font-size:13.5px; line-height:1.5; padding:7px 8px; min-height:35px; overflow:hidden; color:var(--ink); }
   textarea.xl-in:focus{ background:#F3F8FF; box-shadow:inset 0 0 0 2px var(--seal); }
-  textarea.xl-cat{ flex:none; width:150px; font-weight:600; border-right:1px solid var(--rule); }
-  textarea.xl-content{ flex:1; width:auto; min-width:0; }
+  textarea.xl-cat{ flex:none; width:var(--xl-catw, 150px); font-weight:600; border-right:1px solid var(--rule); }
+  textarea.xl-content{ flex:1 1 auto; width:var(--xl-cw, 300px); min-width:0; }
+  textarea.xl-pin{ width:100%; border:none; border-radius:4px; background:transparent; resize:none; overflow:hidden; text-align:center; font-weight:700; font-size:13px; line-height:1.4; padding:5px 2px; min-height:30px; color:var(--ink); }
+  textarea.xl-pin::placeholder{ color:var(--ink-soft); font-weight:500; }
+  textarea.xl-pin:focus{ background:#F3F8FF; box-shadow:inset 0 0 0 2px var(--seal); }
+  .xl-group.add-group .xl-place{ background:#fff; }
+  .xl-group.add-group textarea.xl-pin::placeholder{ color:var(--seal); font-weight:600; }
+  .xl-addgroup-hint{ font-size:11.5px; color:var(--ink-soft); padding:9px 10px; }
+  @media (min-width: 900px){
+    body.xl-wide{ overflow-x:hidden; }
+    body.xl-wide #xlWrap{ width:calc(100vw - 48px); margin-left:calc(50% - 50vw + 24px); }
+    body.xl-wide .xl-sheet{ width:max-content; min-width:min(100%, 880px); max-width:100%; }
+  }
   .xl-status{ flex:none; width:76px; border:none; border-left:1px solid var(--rule); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; background:#fff; color:var(--rule-strong); padding:0 4px; }
   .xl-status.progress{ background:var(--seal-soft); color:var(--seal); }
   .xl-status.wait{ background:var(--amber-soft); color:#9A7B00; }
@@ -635,7 +651,8 @@
     .xl-place{ width:auto; justify-content:flex-start; border-right:none; border-bottom:1px solid var(--rule-strong); padding:6px 10px; }
     .xl-row{ flex-wrap:wrap; }
     textarea.xl-cat{ flex:1; width:auto; border-right:none; }
-    textarea.xl-content{ flex:0 0 100%; order:5; border-top:1px dashed var(--rule); }
+    textarea.xl-content{ flex:0 0 100%; width:auto; order:5; border-top:1px dashed var(--rule); }
+    textarea.xl-pin{ text-align:left; }
     .xl-sheet{ padding:10px; }
     .xl-results .r-date{ width:70px; }
   }
@@ -690,7 +707,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v004</span>
+      <span style="font-size:11px;color:#999">v005</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -718,15 +735,16 @@
   </div>
   <div id="xlWrap">
     <div class="xl-top">
-      <input type="text" id="xlSearchInput" placeholder="일지 검색 (제목·내용·매장)">
+      <input type="text" id="xlSearchInput" placeholder="일지 검색 (제목·내용·분류)">
       <button class="xl-btn" id="xlSearchBtn">검색</button>
+      <button class="xl-btn danger" id="xlSearchClear" style="display:none;">✕ 검색 닫기</button>
       <input type="date" id="xlDateJump" title="날짜로 이동">
       <button class="xl-btn" id="xlCopyBtn">📋 게시용 복사</button>
       <button class="xl-btn" id="xlExcelBtn">📊 엑셀 저장</button>
-      <button class="xl-btn" id="xlPlacesBtn">🏠 매장 관리</button>
+      <button class="xl-btn" id="xlPlacesBtn">🗂 분류 관리</button>
     </div>
     <div class="xl-tabs-wrap">
-      <div class="xl-month"><button id="xlPrevMonth" title="이전 달">‹</button><span id="xlMonthLabel"></span><button id="xlNextMonth" title="다음 달">›</button></div>
+      <div class="xl-month"><button id="xlPrevMonth" title="이전 달">‹</button><span id="xlMonthLabel"></span><button id="xlNextMonth" title="다음 달">›</button><button class="xl-today" id="xlTodayBtn" title="오늘 일지로 이동">오늘</button></div>
       <div class="xl-tabs" id="xlTabs"></div>
     </div>
     <div class="xl-sheet" id="xlSheet"></div>
@@ -1007,15 +1025,15 @@
     <button class="add-btn" id="nameChangeSaveBtn">저장하기</button>
   </div>
 </div>
-<!-- 엑셀형: 매장 관리 -->
+<!-- 엑셀형: 분류 관리 -->
 <div class="overlay center-modal" id="xlPlacesOverlay">
   <div class="sheet" style="max-width:380px;">
-    <h3>매장 관리 <span class="x" id="xlPlacesClose">닫기 ✕</span></h3>
-    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 10px; line-height:1.5;">이름을 바꾸면 이미 쓴 일지의 매장 이름도 함께 바뀌어요. 삭제해도 이미 쓴 일지는 지워지지 않아요.</p>
+    <h3>분류 관리 <span class="x" id="xlPlacesClose">닫기 ✕</span></h3>
+    <p style="font-size:12px; color:var(--ink-soft); margin:-6px 0 10px; line-height:1.5;">이름을 바꾸면 이미 쓴 일지의 분류 이름도 함께 바뀌어요. 삭제해도 이미 쓴 일지는 지워지지 않아요.</p>
     <div id="xlPlacesList"></div>
     <div class="add-acct-form">
-      <input type="text" id="xlPlaceNew" placeholder="새 매장 이름 (예: 성수)">
-      <button class="add-btn" id="xlPlaceAddBtn">매장 추가</button>
+      <input type="text" id="xlPlaceNew" placeholder="새 분류 이름 (예: 성수점)">
+      <button class="add-btn" id="xlPlaceAddBtn">분류 추가</button>
     </div>
   </div>
 </div>
@@ -2222,7 +2240,7 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
 function entryDesc(e){
   if(!e) return '';
   const lines = [];
-  if(e.place) lines.push('매장: ' + e.place);
+  if(e.place) lines.push('분류: ' + e.place);
   lines.push('제목: ' + (e.category || '(없음)'));
   if(e.content) lines.push('내용: ' + (e.content.length > 80 ? e.content.slice(0,80) + '…' : e.content));
   if(e.note) lines.push('상태: ' + e.note);
@@ -3765,6 +3783,7 @@ function stopPrefsSync(){
 function applyViewMode(mode){
   viewMode = mode === 'excel' ? 'excel' : 'basic';
   document.getElementById('tabWorklog').classList.toggle('xl-mode', viewMode==='excel');
+  document.body.classList.toggle('xl-wide', viewMode==='excel');
   [...document.querySelectorAll('#viewModeSeg button')].forEach(b=> b.classList.toggle('active', b.dataset.m===viewMode));
   try{ if(currentUser) localStorage.setItem('wl_viewMode_'+currentUser.uid, viewMode); }catch(e){}
   if(viewMode==='excel') renderXl(); else { renderList(); }
@@ -3805,7 +3824,7 @@ function xlGroups(dayEntries){
   const keys = places.slice();
   dayEntries.forEach(e=>{ const p = e.place || ''; if(p && !keys.includes(p)) keys.push(p); });
   const hasNone = dayEntries.some(e=> !e.place);
-  if(hasNone) keys.unshift(''); // 매장 없이 쓴 일지(기본형에서 쓴 것 등)는 맨 위 '공통'으로
+  if(hasNone) keys.unshift(''); // 분류 없이 쓴 일지(기본형에서 쓴 것 등)는 맨 위 '공통'으로
   return keys.map(k=>({ place:k, entries: dayEntries.filter(e=> (e.place||'') === k) }));
 }
 function xlRowHtml(e, draft){
@@ -3813,7 +3832,7 @@ function xlRowHtml(e, draft){
   const cls = noteClass(note);
   const idAttr = e ? `data-id="${e.id}"` : `data-draft="${draft.key}"`;
   return `<div class="xl-row" ${idAttr}>
-    <span class="xl-handle" title="드래그해서 순서·매장 변경">⠿</span>
+    <span class="xl-handle" title="드래그해서 순서·분류 변경">⠿</span>
     <textarea class="xl-in xl-cat" data-f="category" rows="1" placeholder="제목">${e ? escapeHtml(e.category||'') : ''}</textarea>
     <textarea class="xl-in xl-content" data-f="content" rows="1" placeholder="내용">${e ? escapeHtml(e.content||'') : ''}</textarea>
     <button class="xl-status ${cls}" title="눌러서 상태 선택">${note ? escapeHtml(note) : '선택'}</button>
@@ -3838,10 +3857,9 @@ function renderXl(force){
   if(today.slice(0,7)===month) dset.add(today);
   const dates = [...dset].sort();
   const tabs = document.getElementById('xlTabs');
-  tabs.innerHTML = dates.map(d=>`<button class="xl-tab ${d===xlDate && !xlSearch?'active':''} ${d===today?'today':''}" data-d="${d}">${xlDateLabel(d)}</button>`).join('')
-    + (dset.has(today) && month===today.slice(0,7) ? '' : `<button class="xl-tab add" data-d="${today}">+ 오늘</button>`);
-  const act = tabs.querySelector('.xl-tab.active');
-  if(act) tabs.scrollLeft = Math.max(0, act.offsetLeft - tabs.clientWidth + act.offsetWidth + 40);
+  tabs.innerHTML = dates.map(d=>{ const f = fmtLabel(d); return `<button class="xl-tab ${d===xlDate && !xlSearch?'active':''} ${d===today?'today':''}" data-d="${d}" title="${xlDateLabel(d)}">${f.day}(${f.wd})</button>`; }).join('');
+  document.getElementById('xlTodayBtn').classList.toggle('on', xlDate !== today || !!xlSearch);
+  document.getElementById('xlSearchClear').style.display = xlSearch ? '' : 'none';
   document.getElementById('xlDateJump').value = xlDate;
   if(xlSearch){ renderXlSearch(mine); return; }
   // 시트
@@ -3851,10 +3869,10 @@ function renderXl(force){
   sheet.innerHTML = `
     <div class="xl-title">${year}년 ${mm}월 ${day}일 ${wd}요일 ${xlDate===today?'<small>오늘</small>':''}</div>
     <div class="xl-table">
-      <div class="xl-head"><span class="xl-w-place">매장</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
+      <div class="xl-head"><span class="xl-w-place">분류</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
       ${groups.map(g=>`
         <div class="xl-group">
-          <div class="xl-place ${g.place?'':'etc'}">${g.place ? escapeHtml(g.place) : '공통'}</div>
+          <div class="xl-place ${g.place?'':'etc'}"><textarea class="xl-in xl-pin" rows="1" data-old="${escapeHtml(g.place)}" placeholder="공통" title="눌러서 분류 이름 수정">${escapeHtml(g.place)}</textarea></div>
           <div class="xl-col">
             <div class="xl-rows" data-place="${escapeHtml(g.place)}">
               ${g.entries.map(e=>xlRowHtml(e)).join('')}
@@ -3863,10 +3881,38 @@ function renderXl(force){
             <button class="xl-add" data-place="${escapeHtml(g.place)}">+ 추가</button>
           </div>
         </div>`).join('')}
+      <div class="xl-group add-group">
+        <div class="xl-place"><textarea class="xl-in xl-pin" rows="1" data-new="1" placeholder="+ 분류"></textarea></div>
+        <div class="xl-col"><div class="xl-addgroup-hint">← 새 분류 이름을 쓰고 Enter</div></div>
+      </div>
     </div>
-    <div class="xl-hint">칸을 눌러 바로 입력하면 자동 저장돼요 · Enter: 아래 칸 · Shift+Enter: 줄바꿈 · ⠿ 를 끌어서 순서·매장 변경</div>`;
+    <div class="xl-hint">칸을 눌러 바로 입력하면 자동 저장 · Enter: 아래 칸(마지막 줄이면 새 줄) · Shift+Enter / Alt+Enter: 줄바꿈 · ↑↓←→: 칸 이동 · Esc: 입력 취소<br>분류 이름 칸도 눌러서 바로 수정 · 엑셀에서 복사한 표(제목·내용·상태)를 칸에 붙여넣으면 여러 줄이 한 번에 들어가요 · ⠿ 를 끌어서 순서·분류 변경</div>`;
+  xlFitWidths();
+}
+/* 내용 길이에 맞춰 칸을 가로로 넓힘 (화면 폭까지) */
+let xlMeasureCtx = null;
+function xlTextWidth(text, font){
+  if(!xlMeasureCtx) xlMeasureCtx = document.createElement('canvas').getContext('2d');
+  xlMeasureCtx.font = font;
+  return Math.max(0, ...String(text||'').split('\n').map(l=> xlMeasureCtx.measureText(l).width));
+}
+function xlFitWidths(){
+  const sheet = document.getElementById('xlSheet');
+  if(window.matchMedia('(max-width: 640px)').matches){ sheet.style.removeProperty('--xl-cw'); sheet.style.removeProperty('--xl-catw'); }
+  else {
+    const cats = [...sheet.querySelectorAll('textarea.xl-cat')], cons = [...sheet.querySelectorAll('textarea.xl-content')];
+    const catFont = cats[0] ? getComputedStyle(cats[0]).font : '600 13.5px sans-serif';
+    const conFont = cons[0] ? getComputedStyle(cons[0]).font : '13.5px sans-serif';
+    const catw = Math.round(Math.min(280, Math.max(110, ...cats.map(t=> xlTextWidth(t.value || t.placeholder, catFont) + 22))));
+    const wrapW = document.getElementById('xlWrap').clientWidth;
+    const avail = wrapW - (84 + 22 + catw + 76 + 28 + 30 + 4);
+    const cw = Math.round(Math.max(260, Math.min(avail, Math.max(300, ...cons.map(t=> xlTextWidth(t.value, conFont) + 24)))));
+    sheet.style.setProperty('--xl-catw', catw + 'px');
+    sheet.style.setProperty('--xl-cw', cw + 'px');
+  }
   sheet.querySelectorAll('textarea.xl-in').forEach(xlAutoGrow);
 }
+window.addEventListener('resize', ()=>{ if(viewMode==='excel') xlFitWidths(); });
 function renderXlSearch(mine){
   const q = xlSearch.toLowerCase();
   const hits = mine.filter(e=> ['category','content','place','note'].some(f=> (e[f]||'').toLowerCase().includes(q)))
@@ -3876,11 +3922,12 @@ function renderXlSearch(mine){
     const qe = escapeHtml(xlSearch).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
     return qe ? s.replace(new RegExp(qe,'gi'), m=>`<mark>${m}</mark>`) : s;
   };
+  document.getElementById('xlSheet').style.removeProperty('--xl-cw');
   document.getElementById('xlSheet').innerHTML = `
     <div class="xl-title">'${escapeHtml(xlSearch)}' 검색결과 <small>${hits.length}건</small>
-      <button class="xl-btn" id="xlSearchClose" style="margin-left:auto;">검색 닫기</button></div>
+      <button class="xl-btn danger" id="xlSearchClose" style="margin-left:auto;">✕ 검색 닫기</button></div>
     <div class="xl-table xl-results">
-      <div class="xl-head"><span class="r-date" style="flex:none;width:92px;">날짜</span><span class="xl-w-place">매장</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
+      <div class="xl-head"><span class="r-date" style="flex:none;width:92px;">날짜</span><span class="xl-w-place">분류</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
       ${hits.length ? hits.map(e=>`
         <div class="xl-res" data-d="${e.date}">
           <span class="r-date">${xlDateLabel(e.date)}</span>
@@ -3909,6 +3956,8 @@ function xlShiftMonth(delta){
   const has = xlMine().filter(e=>e.date.slice(0,7)===ym).map(e=>e.date).sort();
   xlGoDate(ym === todayStr().slice(0,7) ? todayStr() : (has.length ? has[has.length-1] : ym+'-01'));
 }
+document.getElementById('xlTodayBtn').onclick = ()=> xlGoDate(todayStr());
+document.getElementById('xlSearchClear').onclick = ()=>{ xlSearch=''; document.getElementById('xlSearchInput').value=''; renderXl(true); };
 document.getElementById('xlPrevMonth').onclick = ()=> xlShiftMonth(-1);
 document.getElementById('xlNextMonth').onclick = ()=> xlShiftMonth(1);
 document.getElementById('xlDateJump').onchange = (e)=> xlGoDate(e.target.value);
@@ -3967,10 +4016,14 @@ function xlSaveCell(t){
   }
 }
 const xlSheetEl = document.getElementById('xlSheet');
-xlSheetEl.addEventListener('input', (e)=>{ if(e.target.classList.contains('xl-in')) xlAutoGrow(e.target); });
+xlSheetEl.addEventListener('input', (e)=>{
+  if(!e.target.classList.contains('xl-in')) return;
+  if(e.target.classList.contains('xl-pin')) xlAutoGrow(e.target); else xlFitWidths();
+});
+xlSheetEl.addEventListener('focusin', (e)=>{ if(e.target.classList.contains('xl-in')) e.target.dataset.orig = e.target.value; });
 xlSheetEl.addEventListener('focusout', (e)=>{
   if(!e.target.classList.contains('xl-in')) return;
-  xlSaveCell(e.target);
+  if(e.target.classList.contains('xl-pin')) xlSavePlaceCell(e.target); else xlSaveCell(e.target);
   setTimeout(()=>{
     const ae = document.activeElement;
     if(xlPendingRender && !xlPointerDown && !(ae && ae.classList && ae.classList.contains('xl-in'))) renderXl();
@@ -3985,9 +4038,9 @@ document.addEventListener('pointerup', ()=>{
     if(xlPendingRender && !(ae && ae.classList && ae.classList.contains('xl-in'))) renderXl();
   }, 30);
 }, true);
-function xlFocus(row, f){
+function xlFocus(row, f, atStart){
   const t = row && row.querySelector(`[data-f=${f}]`);
-  if(t){ t.focus(); const n = t.value.length; t.setSelectionRange(n, n); }
+  if(t){ t.focus(); const n = atStart ? 0 : t.value.length; t.setSelectionRange(n, n); }
 }
 function xlAddDraft(place, focusField){
   const key = 'd' + Date.now() + Math.random().toString(36).slice(2,6);
@@ -3996,25 +4049,112 @@ function xlAddDraft(place, focusField){
   const row = xlSheetEl.querySelector(`.xl-row[data-draft="${key}"]`);
   xlFocus(row, focusField || 'category');
 }
-xlSheetEl.addEventListener('keydown', (e)=>{
-  const t = e.target;
-  if(!t.classList.contains('xl-in') || e.key !== 'Enter' || e.isComposing) return;
-  if(e.shiftKey) return; // 줄바꿈
-  e.preventDefault();
-  if(e.altKey || e.ctrlKey){ // Alt+Enter 도 줄바꿈 (엑셀과 동일)
-    const s = t.selectionStart, en = t.selectionEnd;
-    t.value = t.value.slice(0,s) + '\n' + t.value.slice(en);
-    t.setSelectionRange(s+1, s+1); xlAutoGrow(t); return;
+/* 키보드: 엑셀처럼 Enter/화살표로 칸 이동. 한글 입력 중 Enter도 정상 동작하도록 조합 끝난 뒤 처리 */
+let xlComposeEnter = null, xlEnterGuard = 0;
+function xlHandleEnter(t, alt){
+  if(!document.body.contains(t)) return;
+  if(alt){ // Alt+Enter: 칸 안에서 줄바꿈 (엑셀과 동일)
+    const st = t.selectionStart, en = t.selectionEnd;
+    t.value = t.value.slice(0,st) + '\n' + t.value.slice(en);
+    t.setSelectionRange(st+1, st+1); xlFitWidths(); return;
   }
-  const row = t.closest('.xl-row');
+  if(t.classList.contains('xl-pin')){ t.blur(); return; }
+  const row = t.closest('.xl-row'); if(!row) return;
   const next = row.nextElementSibling;
   if(next && next.classList.contains('xl-row')){ xlFocus(next, t.dataset.f); return; }
   const hasText = [...row.querySelectorAll('.xl-in')].some(x=>x.value.trim());
   if(hasText){
     const place = row.closest('.xl-rows').dataset.place;
     t.blur();
-    xlAddDraft(place, t.dataset.f === 'content' ? 'category' : t.dataset.f);
+    xlAddDraft(place, 'category');
   }
+}
+xlSheetEl.addEventListener('compositionend', ()=>{
+  if(!xlComposeEnter) return;
+  const p = xlComposeEnter; xlComposeEnter = null; xlEnterGuard = Date.now();
+  setTimeout(()=> xlHandleEnter(p.t, p.alt), 0);
+});
+xlSheetEl.addEventListener('keydown', (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('xl-in')) return;
+  if(e.key === 'Escape'){
+    if(t.dataset.orig !== undefined){ t.value = t.dataset.orig; xlAutoGrow(t); }
+    t.blur(); return;
+  }
+  if(e.key === 'Enter' || e.keyCode === 229 && e.code === 'Enter'){
+    if(e.shiftKey && !t.classList.contains('xl-pin')) return; // Shift+Enter: 줄바꿈
+    e.preventDefault();
+    const alt = !t.classList.contains('xl-pin') && (e.altKey || e.ctrlKey);
+    if(e.isComposing){ xlComposeEnter = { t, alt }; return; }
+    if(Date.now() - xlEnterGuard < 200) return; // 조합 끝나며 이미 처리한 Enter
+    xlHandleEnter(t, alt); return;
+  }
+  if(e.isComposing || t.classList.contains('xl-pin')) return;
+  const row = t.closest('.xl-row'); if(!row) return;
+  const selS = t.selectionStart, selE = t.selectionEnd;
+  if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){
+    const up = e.key === 'ArrowUp';
+    if(up && t.value.slice(0, selS).includes('\n')) return;
+    if(!up && t.value.slice(selE).includes('\n')) return;
+    const rows = [...xlSheetEl.querySelectorAll('.xl-row')];
+    const target = rows[rows.indexOf(row) + (up ? -1 : 1)];
+    if(target){ e.preventDefault(); xlFocus(target, t.dataset.f); }
+    return;
+  }
+  if(e.key === 'ArrowLeft' && selS === 0 && selE === 0 && t.dataset.f === 'content'){ e.preventDefault(); xlFocus(row, 'category'); return; }
+  if(e.key === 'ArrowRight' && selS === t.value.length && selE === selS && t.dataset.f === 'category'){ e.preventDefault(); xlFocus(row, 'content', true); return; }
+});
+/* 엑셀에서 복사한 표 붙여넣기 → 여러 줄 한 번에 추가 */
+function xlParseTSV(str){
+  const rows = []; let row = [], cell = '', q = false;
+  str = str.replace(/\r\n?/g, '\n');
+  for(let i=0; i<str.length; i++){
+    const c = str[i];
+    if(q){
+      if(c === '"'){ if(str[i+1] === '"'){ cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if(c === '"' && cell === ''){ q = true; }
+    else if(c === '\t'){ row.push(cell); cell = ''; }
+    else if(c === '\n'){ row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if(cell !== '' || row.length){ row.push(cell); rows.push(row); }
+  return rows;
+}
+xlSheetEl.addEventListener('paste', async (e)=>{
+  const t = e.target;
+  if(!t.classList.contains('xl-in') || t.classList.contains('xl-pin')) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+  if(!text.includes('\t')) return; // 일반 글자 붙여넣기는 그대로
+  const parsed = xlParseTSV(text).map(r=> r.map(c=> c.trim())).filter(r=> r.some(c=> c));
+  if(!parsed.length) return;
+  e.preventDefault();
+  const row = t.closest('.xl-row');
+  const basePlace = row.closest('.xl-rows').dataset.place;
+  const list = xlPlaces().slice();
+  const items = parsed.map(r=>{
+    let place = basePlace, cat, con, st;
+    if(r.length >= 4){ [place, cat, con, st] = r; if(!place) place = basePlace; }
+    else if(r.length === 3){ [cat, con, st] = r; }
+    else { [cat, con] = r; st = ''; }
+    if(st && !STATUS_LIST.includes(st)){ con = [con, st].filter(Boolean).join(' '); st = ''; }
+    return { place, category: cat||'', content: con||'', note: st||'' };
+  });
+  if(!await customConfirm(`엑셀에서 복사한 ${items.length}줄을 추가할까요?\n\n` + items.slice(0,5).map(it=>`· ${it.place ? '['+it.place+'] ' : ''}${it.category} ${it.content.slice(0,30)}`).join('\n') + (items.length>5 ? `\n… 외 ${items.length-5}줄` : ''), { okLabel:'추가' })) return;
+  if(row.dataset.draft && ![...row.querySelectorAll('.xl-in')].some(x=>x.value.trim())) xlDrafts = xlDrafts.filter(d=>d.key!==row.dataset.draft);
+  const batch = db.batch();
+  items.forEach(it=>{
+    if(it.place && !list.includes(it.place)) list.push(it.place);
+    const ref = ENTRIES.doc();
+    const data = Object.assign({ date: xlDate, inspection:'', dueDate:'', ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+      seq: xlSeqForPlace(it.place), createdAt: firebase.firestore.FieldValue.serverTimestamp() }, it);
+    allEntries.push(Object.assign({ id: ref.id }, data));
+    batch.set(ref, data);
+  });
+  if(list.length !== xlPlaces().length) await savePrefs({ places: list });
+  try{ await batch.commit(); logAction('업무일지 붙여넣기(엑셀형)', `${xlDate} ${items.length}줄`); showToast(`${items.length}줄을 붙여넣었어요 ✓`); }
+  catch(err){ alert('붙여넣기 실패: ' + err.message); }
+  renderXl(true);
 });
 xlSheetEl.addEventListener('click', async (e)=>{
   if(e.target.id === 'xlSearchClose'){ xlSearch=''; document.getElementById('xlSearchInput').value=''; renderXl(true); return; }
@@ -4037,7 +4177,7 @@ xlSheetEl.addEventListener('click', async (e)=>{
     await deleteEntryWithConfirm(row.dataset.id, '업무일지 삭제(엑셀형)');
   }
 });
-/* ---- 드래그로 순서·매장 변경 (마우스·터치 공통) ---- */
+/* ---- 드래그로 순서·분류 변경 (마우스·터치 공통) ---- */
 xlSheetEl.addEventListener('pointerdown', (e)=>{
   const h = e.target.closest('.xl-handle'); if(!h) return;
   const row = h.closest('.xl-row'); if(!row) return;
@@ -4101,7 +4241,50 @@ async function xlEndDrag(){
 }
 xlSheetEl.addEventListener('pointerup', xlEndDrag);
 xlSheetEl.addEventListener('pointercancel', xlEndDrag);
-/* ---- 매장 관리 ---- */
+/* ---- 분류 이름 (표에서 바로 수정) ---- */
+async function xlRenamePlace(oldName, newName){
+  const list = xlPlaces().slice();
+  const i = list.indexOf(oldName);
+  if(list.includes(newName)){ if(i >= 0) list.splice(i, 1); }  // 이미 있는 이름이면 합치기
+  else if(i >= 0) list[i] = newName; else list.push(newName);
+  await savePrefs({ places: list });
+  const targets = xlMine().filter(x=> x.place === oldName);
+  for(let k=0; k<targets.length; k+=400){
+    const batch = db.batch();
+    targets.slice(k, k+400).forEach(x=>{ x.place = newName; batch.update(ENTRIES.doc(x.id), { place: newName }); });
+    try{ await batch.commit(); }catch(err){ alert('일지 분류 이름 변경 실패: ' + err.message); break; }
+  }
+  logAction('분류 이름 변경', `${oldName} → ${newName}`);
+  showToast(`'${oldName}' → '${newName}' 로 바꿨어요 (지난 일지 포함)`);
+}
+async function xlSavePlaceCell(t){
+  const name = t.value.replace(/\s+/g,' ').trim();
+  if(t.dataset.new){
+    if(!name) return;
+    const list = xlPlaces().slice();
+    if(!list.includes(name)){ list.push(name); await savePrefs({ places: list }); logAction('분류 추가', name); }
+    t.value = '';
+    renderXl(true);
+    return;
+  }
+  const old = t.dataset.old || '';
+  if(name === old) return;
+  if(!old){ // '공통' 칸에 이름을 쓰면 → 이 날짜의 공통 일지를 그 분류로
+    if(!name) return;
+    const list = xlPlaces().slice();
+    if(!list.includes(name)){ list.push(name); await savePrefs({ places: list }); }
+    const targets = xlMine().filter(x=> x.date === xlDate && !x.place);
+    const batch = db.batch();
+    targets.forEach(x=>{ x.place = name; batch.update(ENTRIES.doc(x.id), { place: name }); });
+    try{ await batch.commit(); logAction('분류 지정', `${xlDate} 공통 → ${name}`); }catch(err){ alert('분류 변경 실패: ' + err.message); }
+    renderXl(true);
+    return;
+  }
+  if(!name){ t.value = old; return; }
+  await xlRenamePlace(old, name);
+  renderXl(true);
+}
+/* ---- 분류 관리 ---- */
 function renderXlPlaces(){
   const list = xlPlaces();
   document.getElementById('xlPlacesList').innerHTML = list.map((p,i)=>`
@@ -4122,8 +4305,8 @@ document.getElementById('xlPlacesOverlay').addEventListener('click', async (e)=>
   if(b.dataset.a === 'up' && i>0){ [list[i-1], list[i]] = [list[i], list[i-1]]; }
   else if(b.dataset.a === 'down' && i<list.length-1){ [list[i+1], list[i]] = [list[i], list[i+1]]; }
   else if(b.dataset.a === 'del'){
-    if(list.length <= 1){ alert('매장은 최소 1개는 있어야 해요.'); return; }
-    if(!await customConfirm(`'${list[i]}' 매장을 목록에서 뺄까요? (이미 쓴 일지는 그대로 남아요)`)) return;
+    if(list.length <= 1){ alert('분류는 최소 1개는 있어야 해요.'); return; }
+    if(!await customConfirm(`'${list[i]}' 분류를 목록에서 뺄까요? (이미 쓴 일지는 그대로 남아요)`)) return;
     list.splice(i,1);
   } else return;
   await savePrefs({ places: list });
@@ -4133,25 +4316,15 @@ document.getElementById('xlPlacesOverlay').addEventListener('change', async (e)=
   const inp = e.target.closest('.xl-place-row input'); if(!inp) return;
   const oldName = inp.dataset.old; const newName = inp.value.trim();
   if(!newName || newName === oldName){ inp.value = oldName; return; }
-  const list = xlPlaces().slice();
-  if(list.includes(newName)){ alert('이미 있는 매장 이름이에요.'); inp.value = oldName; return; }
-  list[list.indexOf(oldName)] = newName;
-  await savePrefs({ places: list });
-  // 이미 쓴 내 일지의 매장 이름도 함께 변경 (500건씩 나눠서)
-  const targets = xlMine().filter(x=> x.place === oldName);
-  for(let k=0; k<targets.length; k+=400){
-    const batch = db.batch();
-    targets.slice(k, k+400).forEach(x=>{ x.place = newName; batch.update(ENTRIES.doc(x.id), { place: newName }); });
-    try{ await batch.commit(); }catch(err){ alert('일지 매장 이름 변경 실패: ' + err.message); break; }
-  }
-  logAction('매장 이름 변경', `${oldName} → ${newName}`);
+  if(xlPlaces().includes(newName) && !await customConfirm(`'${newName}' 분류가 이미 있어요. '${oldName}' 일지를 '${newName}'(으)로 합칠까요?`)){ inp.value = oldName; return; }
+  await xlRenamePlace(oldName, newName);
   renderXlPlaces(); renderXl(true);
 });
 document.getElementById('xlPlaceAddBtn').onclick = async ()=>{
   const inp = document.getElementById('xlPlaceNew');
   const name = inp.value.trim(); if(!name) return;
   const list = xlPlaces().slice();
-  if(list.includes(name)){ alert('이미 있는 매장 이름이에요.'); return; }
+  if(list.includes(name)){ alert('이미 있는 분류 이름이에요.'); return; }
   list.push(name);
   await savePrefs({ places: list });
   inp.value = '';
@@ -4186,12 +4359,12 @@ function xlBuildPostHtml(d){
   });
   return `<p style="font-size:15px; margin:0 0 8px;"><b>${year}년 ${month}월 ${day}일 ${wd}요일</b></p>`
     + `<table style="border-collapse:collapse; width:100%;"><thead><tr>`
-    + `<th style="${th} width:80px; text-align:center;">매장</th><th style="${th} width:140px;">제목</th><th style="${th}">내용</th><th style="${th} width:70px; text-align:center;">상태</th>`
+    + `<th style="${th} width:80px; text-align:center;">분류</th><th style="${th} width:140px;">제목</th><th style="${th}">내용</th><th style="${th} width:70px; text-align:center;">상태</th>`
     + `</tr></thead><tbody>${rows}</tbody></table>`;
 }
 function xlBuildPostText(d){
   const {year, month, day, wd} = fmtLabel(d);
-  const lines = [`${year}년 ${month}월 ${day}일 ${wd}요일`, ['매장','제목','내용','상태'].join('\t')];
+  const lines = [`${year}년 ${month}월 ${day}일 ${wd}요일`, ['분류','제목','내용','상태'].join('\t')];
   xlDayRows(d).forEach(g=> g.entries.forEach(e=> lines.push([g.place||'공통', e.category||'', (e.content||'').replace(/\n/g,' '), e.note||''].join('\t'))));
   return lines.join('\n');
 }
@@ -4236,7 +4409,7 @@ document.getElementById('xlExcelBtn').onclick = ()=>{
     const font = (o)=> Object.assign({name:'맑은 고딕', sz:10.5, color:{rgb:'1F2328'}}, o||{});
     dates.forEach(d=>{
       const {year, month: m, day, wd} = fmtLabel(d);
-      const aoa = [[`${year}년 ${m}월 ${day}일 ${wd}요일`,'','',''], ['매장','제목','내용','상태']];
+      const aoa = [[`${year}년 ${m}월 ${day}일 ${wd}요일`,'','',''], ['분류','제목','내용','상태']];
       const merges = [{s:{r:0,c:0}, e:{r:0,c:3}}];
       const statusRows = [];
       xlDayRows(d).forEach(g=>{
