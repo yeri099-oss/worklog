@@ -624,7 +624,8 @@
   @media (min-width: 900px){
     body.xl-wide{ overflow-x:hidden; }
     body.xl-wide #xlWrap{ width:calc(100vw - 48px); margin-left:calc(50% - 50vw + 24px); }
-    body.xl-wide .xl-sheet{ width:max-content; min-width:min(100%, 880px); max-width:100%; }
+    body.xl-wide .xl-sheet{ width:max-content; min-width:min(100%, 880px); max-width:100%; margin-left:auto; margin-right:auto; }
+    body.xl-wide .xl-top, body.xl-wide .xl-tabs-wrap{ margin-left:auto; margin-right:auto; max-width:100%; }
   }
   .xl-status{ flex:none; width:76px; border:none; border-left:1px solid var(--rule); font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; background:#fff; color:var(--rule-strong); padding:0 4px; }
   .xl-status.progress{ background:var(--seal-soft); color:var(--seal); }
@@ -707,7 +708,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v005</span>
+      <span style="font-size:11px;color:#999">v006</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -3911,6 +3912,15 @@ function xlFitWidths(){
     sheet.style.setProperty('--xl-cw', cw + 'px');
   }
   sheet.querySelectorAll('textarea.xl-in').forEach(xlAutoGrow);
+  xlAlign();
+}
+/* 가운데 정렬: 검색줄·날짜탭을 표와 같은 폭으로 맞춰서 양옆으로 함께 늘어나게 */
+function xlAlign(){
+  const sheet = document.getElementById('xlSheet');
+  const parts = [document.querySelector('#xlWrap .xl-top'), document.querySelector('#xlWrap .xl-tabs-wrap')];
+  const wide = document.body.classList.contains('xl-wide') && window.matchMedia('(min-width: 900px)').matches;
+  const w = wide ? Math.ceil(sheet.getBoundingClientRect().width) : 0;
+  parts.forEach(el=>{ if(el) el.style.width = w ? w + 'px' : ''; });
 }
 window.addEventListener('resize', ()=>{ if(viewMode==='excel') xlFitWidths(); });
 function renderXlSearch(mine){
@@ -3937,6 +3947,7 @@ function renderXlSearch(mine){
           <span class="xl-w-status">${escapeHtml(e.note||'')}</span>
         </div>`).join('') : '<div style="padding:16px; color:var(--ink-soft); font-size:13px;">검색 결과가 없습니다.</div>'}
     </div>`;
+  xlAlign();
 }
 function xlAutoGrow(t){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
 function xlGoDate(d){
