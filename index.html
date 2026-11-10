@@ -343,6 +343,11 @@
     background:var(--ink); color:#fff; font-size:13px; padding:10px 18px; border-radius:999px;
     z-index:200; box-shadow:var(--shadow); display:none;
   }
+  .sheet .row-btns button.danger-solid{ background:var(--danger); color:#fff; border-color:var(--danger); }
+  .undo-toast{ position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); transform:translateX(-50%); background:var(--ink); color:#fff; font-size:13px; padding:10px 10px 10px 16px; border-radius:999px; z-index:200; display:none; align-items:center; gap:12px; box-shadow:var(--shadow); max-width:calc(100vw - 32px); }
+  .undo-toast.show{ display:flex; }
+  .undo-toast span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .undo-toast button{ flex:none; background:#fff; color:var(--ink); border:none; border-radius:999px; padding:6px 12px; font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; }
   .copied-toast.show{ display:block; animation: fadeUp .25s ease-out; }
   @keyframes fadeUp{ from{opacity:0; transform:translate(-50%,6px);} to{opacity:1; transform:translate(-50%,0);} }
   /* ===== Login ===== */
@@ -685,7 +690,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v003</span>
+      <span style="font-size:11px;color:#999">v004</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -1032,7 +1037,7 @@
 <!-- Confirm modal (custom, centered) -->
 <div class="overlay center-modal" id="confirmOverlay">
   <div class="sheet" style="max-width:340px;">
-    <p id="confirmMsg" style="font-size:14px; line-height:1.5; margin:0 0 18px; color:var(--ink);"></p>
+    <p id="confirmMsg" style="font-size:14px; line-height:1.55; margin:0 0 18px; color:var(--ink); white-space:pre-line; word-break:break-word;"></p>
     <div class="row-btns">
       <button id="confirmCancelBtn">취소</button>
       <button class="primary" id="confirmOkBtn">확인</button>
@@ -1076,6 +1081,7 @@
   </div>
 </div>
 <div class="copied-toast" id="copiedToast">복사되었습니다 ✓</div>
+<div class="undo-toast" id="undoToast"><span id="undoToastMsg"></span><button id="undoToastBtn">되돌리기</button></div>
 <!-- 체크리스트 이미지 캡처용(화면 밖 숨김) -->
 <div id="clCapture" style="position:fixed; left:-99999px; top:0; width:900px; background:#fff; padding:24px; box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Malgun Gothic',sans-serif; color:#1F2328;"></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -2059,14 +2065,7 @@ document.getElementById('editSave').onclick = async ()=>{
 };
 document.getElementById('editDelete').onclick = async ()=>{
   if(!editingId) return;
-  if(!await customConfirm('이 업무일지를 삭제할까요?')) return;
-  const e = allEntries.find(x=>x.id===editingId);
-  try{
-    await ENTRIES.doc(editingId).delete();
-    await removeEntryDashCopy(editingId);
-    logAction('업무일지 삭제', e ? `${e.date} ${e.category}` : editingId);
-    document.getElementById('editOverlay').classList.remove('open');
-  }catch(err){ alert('삭제 실패: ' + err.message); }
+  if(await deleteEntryWithConfirm(editingId, '업무일지 삭제')) document.getElementById('editOverlay').classList.remove('open');
 };
 /* ============ Excel export ============ */
 document.getElementById('exportBtn').onclick = ()=>{
@@ -2219,14 +2218,59 @@ document.getElementById('reportImgCopy').onclick = async ()=>{
     btn.disabled = false; btn.textContent = orig;
   }
 };
+/* ============ 업무일지 삭제 (확인창 + 되돌리기) ============ */
+function entryDesc(e){
+  if(!e) return '';
+  const lines = [];
+  if(e.place) lines.push('매장: ' + e.place);
+  lines.push('제목: ' + (e.category || '(없음)'));
+  if(e.content) lines.push('내용: ' + (e.content.length > 80 ? e.content.slice(0,80) + '…' : e.content));
+  if(e.note) lines.push('상태: ' + e.note);
+  return lines.join('\n');
+}
+let undoTimer = null;
+function showUndoToast(msg, onUndo){
+  const t = document.getElementById('undoToast');
+  document.getElementById('undoToastMsg').textContent = msg;
+  const btn = document.getElementById('undoToastBtn');
+  btn.onclick = async ()=>{ t.classList.remove('show'); clearTimeout(undoTimer); await onUndo(); };
+  t.classList.add('show');
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(()=> t.classList.remove('show'), 10000);
+}
+async function deleteEntryWithConfirm(id, logLabel){
+  const e = allEntries.find(x=>x.id===id);
+  if(!e) return false;
+  const {month, day, wd} = fmtLabel(e.date);
+  const ok = await customConfirm(`${month}월 ${day}일(${wd}) 업무일지에서 아래 줄을 삭제할까요?\n\n${entryDesc(e)}`, { okLabel:'삭제', danger:true });
+  if(!ok) return false;
+  const backup = Object.assign({}, e); delete backup.id;
+  try{
+    await ENTRIES.doc(id).delete();
+    await removeEntryDashCopy(id);
+    logAction(logLabel || '업무일지 삭제', `${e.date} ${entryDesc(e).replace(/\n/g,' / ')}`);
+  }catch(err){ alert('삭제 실패: ' + err.message); return false; }
+  showUndoToast(`'${e.category || '이 줄'}' 삭제됨`, async ()=>{
+    try{
+      await ENTRIES.doc(id).set(backup);
+      logAction('업무일지 삭제 되돌리기', `${e.date} ${e.category||''}`);
+      showToast('되돌렸어요 ✓');
+    }catch(err){ alert('되돌리기 실패: ' + err.message); }
+  });
+  return true;
+}
 /* ============ Utils ============ */
-function customConfirm(message){
+function customConfirm(message, opts){
+  opts = opts || {};
   return new Promise(resolve=>{
     document.getElementById('confirmMsg').textContent = message;
     const overlay = document.getElementById('confirmOverlay');
     overlay.classList.add('open');
     const okBtn = document.getElementById('confirmOkBtn');
     const cancelBtn = document.getElementById('confirmCancelBtn');
+    okBtn.textContent = opts.okLabel || '확인';
+    okBtn.classList.toggle('danger-solid', !!opts.danger);
+    setTimeout(()=>cancelBtn.focus(), 0); // 실수로 Enter를 눌러도 '취소'가 되도록
     function cleanup(result){
       overlay.classList.remove('open');
       okBtn.removeEventListener('click', onOk);
@@ -3990,10 +4034,7 @@ xlSheetEl.addEventListener('click', async (e)=>{
   if(del){
     const row = del.closest('.xl-row');
     if(row.dataset.draft){ xlDrafts = xlDrafts.filter(d=>d.key!==row.dataset.draft); renderXl(true); return; }
-    const en = allEntries.find(x=>x.id===row.dataset.id);
-    if(!await customConfirm(`'${(en && en.category) || '이 줄'}' 을(를) 삭제할까요?`)) return;
-    try{ await ENTRIES.doc(row.dataset.id).delete(); logAction('업무일지 삭제(엑셀형)', `${xlDate} ${(en&&en.category)||''}`); }
-    catch(err){ alert('삭제 실패: ' + err.message); }
+    await deleteEntryWithConfirm(row.dataset.id, '업무일지 삭제(엑셀형)');
   }
 });
 /* ---- 드래그로 순서·매장 변경 (마우스·터치 공통) ---- */
