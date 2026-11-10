@@ -685,7 +685,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v002</span>
+      <span style="font-size:11px;color:#999">v003</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -3761,7 +3761,7 @@ function xlGroups(dayEntries){
   const keys = places.slice();
   dayEntries.forEach(e=>{ const p = e.place || ''; if(p && !keys.includes(p)) keys.push(p); });
   const hasNone = dayEntries.some(e=> !e.place);
-  if(hasNone) keys.push('');
+  if(hasNone) keys.unshift(''); // 매장 없이 쓴 일지(기본형에서 쓴 것 등)는 맨 위 '공통'으로
   return keys.map(k=>({ place:k, entries: dayEntries.filter(e=> (e.place||'') === k) }));
 }
 function xlRowHtml(e, draft){
@@ -3810,7 +3810,7 @@ function renderXl(force){
       <div class="xl-head"><span class="xl-w-place">매장</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
       ${groups.map(g=>`
         <div class="xl-group">
-          <div class="xl-place ${g.place?'':'etc'}">${g.place ? escapeHtml(g.place) : '기타'}</div>
+          <div class="xl-place ${g.place?'':'etc'}">${g.place ? escapeHtml(g.place) : '공통'}</div>
           <div class="xl-col">
             <div class="xl-rows" data-place="${escapeHtml(g.place)}">
               ${g.entries.map(e=>xlRowHtml(e)).join('')}
@@ -4136,7 +4136,7 @@ function xlBuildPostHtml(d){
     g.entries.forEach((e,i)=>{
       const st = XL_STATUS_STYLE[e.note] || ['#FFFFFF','#1F2328'];
       rows += '<tr>'
-        + (i===0 ? `<td rowspan="${g.entries.length}" style="${td} font-weight:bold; text-align:center; background:#FAFAFB;">${g.place ? escapeHtml(g.place) : '기타'}</td>` : '')
+        + (i===0 ? `<td rowspan="${g.entries.length}" style="${td} font-weight:bold; text-align:center; background:#FAFAFB;">${g.place ? escapeHtml(g.place) : '공통'}</td>` : '')
         + `<td style="${td}">${nl(e.category)}</td>`
         + `<td style="${td}">${nl(e.content)}</td>`
         + `<td style="${td} text-align:center; background:${st[0]}; color:${st[1]}; white-space:nowrap;">${escapeHtml(e.note||'')}</td>`
@@ -4151,7 +4151,7 @@ function xlBuildPostHtml(d){
 function xlBuildPostText(d){
   const {year, month, day, wd} = fmtLabel(d);
   const lines = [`${year}년 ${month}월 ${day}일 ${wd}요일`, ['매장','제목','내용','상태'].join('\t')];
-  xlDayRows(d).forEach(g=> g.entries.forEach(e=> lines.push([g.place||'기타', e.category||'', (e.content||'').replace(/\n/g,' '), e.note||''].join('\t'))));
+  xlDayRows(d).forEach(g=> g.entries.forEach(e=> lines.push([g.place||'공통', e.category||'', (e.content||'').replace(/\n/g,' '), e.note||''].join('\t'))));
   return lines.join('\n');
 }
 document.getElementById('xlCopyBtn').onclick = async ()=>{
@@ -4201,7 +4201,7 @@ document.getElementById('xlExcelBtn').onclick = ()=>{
       xlDayRows(d).forEach(g=>{
         const start = aoa.length;
         g.entries.forEach((e,i)=>{
-          aoa.push([i===0 ? (g.place||'기타') : '', e.category||'', e.content||'', e.note||'']);
+          aoa.push([i===0 ? (g.place||'공통') : '', e.category||'', e.content||'', e.note||'']);
           statusRows.push({ r: aoa.length-1, note: e.note||'' });
         });
         if(g.entries.length > 1) merges.push({s:{r:start,c:0}, e:{r:aoa.length-1,c:0}});
