@@ -31,6 +31,8 @@
     --slate-soft: #EEF1F4;
     --yellow: #EAB308;
     --plan: #7C3AED;
+    --export: #15803D;      /* 보고·내보내기 버튼 (진행중 파랑과 구분) */
+    --export-soft: #E8F6EE;
     --plan-soft: #EDE9FE;
     --danger: #DC2626;
     --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 20px rgba(31,35,40,.06);
@@ -168,13 +170,13 @@
   .toolbar .count{ font-size:12px; color:var(--ink-soft); }
   .share-bar{ display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin:-2px 0 12px; }
   .share-label{ font-size:12px; color:var(--ink-soft); margin-right:2px; }
-  /* '엑셀로 내보내기'와 같은 연한 파랑 */
-  .share-btn, .xl-btn.share{ background:var(--seal-soft); border:1px solid var(--seal); color:var(--seal); font-weight:600; border-radius:8px; padding:7px 12px; font-size:12.5px; cursor:pointer; font-family:inherit; white-space:nowrap; }
-  .share-btn:hover, .xl-btn.share:hover{ background:#C7DBFD; }
-  .sheet .row-btns button.share-btn{ background:var(--seal-soft); color:var(--seal); border-color:var(--seal); }
+  /* 보고·내보내기 버튼: 연한 초록 */
+  .share-btn, .xl-btn.share{ background:var(--export-soft); border:1px solid var(--export); color:var(--export); font-weight:600; border-radius:8px; padding:7px 12px; font-size:12.5px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .share-btn:hover, .xl-btn.share:hover{ background:#D1F0DD; }
+  .sheet .row-btns button.share-btn{ background:var(--export-soft); color:var(--export); border-color:var(--export); }
   .report-btn{
-    display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--seal);
-    background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:6px 11px; cursor:pointer;
+    display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--export);
+    background:var(--export-soft); border:1px solid var(--export); border-radius:8px; padding:6px 11px; cursor:pointer;
   }
   /* ===== Ledger list ===== */
   .day-group{ margin-bottom: 20px; }
@@ -716,7 +718,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v013</span>
+      <span style="font-size:11px;color:#999">v014</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
