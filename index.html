@@ -708,7 +708,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v006</span>
+      <span style="font-size:11px;color:#999">v007</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -3949,7 +3949,14 @@ function renderXlSearch(mine){
     </div>`;
   xlAlign();
 }
-function xlAutoGrow(t){ t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function xlAutoGrow(t){
+  // 같은 줄의 제목·내용 칸은 항상 같은 높이로 (세로선이 끊기지 않도록)
+  const row = t.closest('.xl-row');
+  const cells = row ? [...row.querySelectorAll('textarea.xl-in')] : [t];
+  cells.forEach(c=> c.style.height = 'auto');
+  const h = Math.max(...cells.map(c=> c.scrollHeight));
+  cells.forEach(c=> c.style.height = h + 'px');
+}
 function xlGoDate(d){
   if(!d) return;
   if(d !== xlDate) xlDrafts = [];
