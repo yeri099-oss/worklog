@@ -329,6 +329,9 @@
   }
   /* 보고 미리보기 창을 넓게(캡처 이미지와 동일하게). 화면이 좁으면 가로 스크롤로 봄 */
   #reportOverlay .sheet{ max-width:1044px; overflow-x:auto; }
+  /* 엑셀형 보고: 창 폭을 표 폭에 맞춤 (오른쪽 빈 여백 없애기) */
+  #reportOverlay.fit .sheet{ width:max-content; max-width:calc(100vw - 40px); min-width:min(520px, calc(100vw - 40px)); }
+  #reportOverlay.fit .report-capture{ margin:0 auto; }
   .report-capture-title{
     font-family:'Pretendard-Regular','Pretendard',sans-serif; font-weight:700; font-size:19px; margin-bottom:10px;
     padding-bottom:9px; border-bottom:1px solid var(--rule-strong); color:var(--ink);
@@ -718,7 +721,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v014</span>
+      <span style="font-size:11px;color:#999">v015</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -2165,12 +2168,14 @@ function buildReport(){
   const cap = document.getElementById('reportCapture');
   if(typeof viewMode !== 'undefined' && viewMode === 'excel'){
     // 엑셀형: 게시용 복사와 같은 표 모양(분류 포함)으로 이미지 생성
-    cap.style.width = 'max-content'; cap.style.minWidth = '600px';
+    cap.style.width = 'max-content'; cap.style.minWidth = '480px';
+    document.getElementById('reportOverlay').classList.add('fit');
     const has = xlMine().some(e=> e.date === reportDate);
     document.getElementById('reportCaptureBody').innerHTML = has ? xlBuildPostHtml(reportDate, true) : `<div class="rc-empty">기록된 업무가 없습니다.</div>`;
     return;
   }
   cap.style.width = ''; cap.style.minWidth = '';
+  document.getElementById('reportOverlay').classList.remove('fit');
   const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===currentUser.uid)).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   const bodyEl = document.getElementById('reportCaptureBody');
   if(!entries.length){
