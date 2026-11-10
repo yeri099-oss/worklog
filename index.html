@@ -715,7 +715,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v010</span>
+      <span style="font-size:11px;color:#999">v011</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -4008,7 +4008,7 @@ function renderXl(force){
         <div class="xl-col"><div class="xl-addgroup-hint">← 새 분류 이름을 쓰고 Enter</div></div>
       </div>`}
     </div>
-    <div class="xl-hint">칸을 눌러 바로 입력하면 자동 저장 · Enter: 아래 칸(마지막 줄이면 새 줄) · Shift+Enter / Alt+Enter: 줄바꿈 · ↑↓←→: 칸 이동 · Esc: 입력 취소<br>분류 이름 칸도 눌러서 바로 수정 · 엑셀에서 복사한 표(제목·내용·상태)를 칸에 붙여넣으면 여러 줄이 한 번에 들어가요 · ⠿ 를 끌어서 순서·분류 변경</div>`;
+    <div class="xl-hint">Shift+Enter / Alt+Enter: 줄바꿈 · ↑↓←→: 칸 이동 · Esc: 입력 취소</div>`;
   xlFitWidths();
 }
 /* 내용 길이에 맞춰 칸을 가로로 넓힘 (화면 폭까지) */
@@ -4177,10 +4177,16 @@ document.addEventListener('pointerup', ()=>{
     if(xlPendingRender && !(ae && ae.classList && ae.classList.contains('xl-in'))) renderXl();
   }, 30);
 }, true);
+let xlNavCell = null; // 화살표/Enter로 막 들어온 칸 (아직 입력 전) → 화살표는 칸 이동
 function xlFocus(row, f, atStart){
   const t = row && row.querySelector(`[data-f=${f}]`);
-  if(t){ t.focus(); const n = atStart ? 0 : t.value.length; t.setSelectionRange(n, n); }
+  if(t){ t.focus(); const n = atStart ? 0 : t.value.length; t.setSelectionRange(n, n); xlNavCell = t; }
 }
+xlSheetEl.addEventListener('input', (e)=>{ if(e.target === xlNavCell) xlNavCell = null; });
+// 엑셀처럼: 클릭해서 들어오면 화살표 = 칸 이동, 더블클릭·F2·글자 입력부터는 칸 안에서 커서 이동
+xlSheetEl.addEventListener('focusin', (e)=>{ const t = e.target; if(t.classList && t.classList.contains('xl-in') && !t.classList.contains('xl-pin')) xlNavCell = t; });
+xlSheetEl.addEventListener('dblclick', (e)=>{ if(e.target === xlNavCell) xlNavCell = null; });
+xlSheetEl.addEventListener('keydown', (e)=>{ if(e.key === 'F2' && e.target === xlNavCell){ e.preventDefault(); xlNavCell = null; } }, true);
 function xlAddDraft(place, focusField){
   const key = 'd' + Date.now() + Math.random().toString(36).slice(2,6);
   xlDrafts.push({ key, place });
@@ -4231,17 +4237,18 @@ xlSheetEl.addEventListener('keydown', (e)=>{
   if(e.isComposing || t.classList.contains('xl-pin')) return;
   const row = t.closest('.xl-row'); if(!row) return;
   const selS = t.selectionStart, selE = t.selectionEnd;
+  const nav = (xlNavCell === t); // 입력 전이면 커서 위치와 상관없이 칸 이동
   if(e.key === 'ArrowUp' || e.key === 'ArrowDown'){
     const up = e.key === 'ArrowUp';
-    if(up && t.value.slice(0, selS).includes('\n')) return;
-    if(!up && t.value.slice(selE).includes('\n')) return;
+    if(!nav && up && t.value.slice(0, selS).includes('\n')) return;
+    if(!nav && !up && t.value.slice(selE).includes('\n')) return;
     const rows = [...xlSheetEl.querySelectorAll('.xl-row')];
     const target = rows[rows.indexOf(row) + (up ? -1 : 1)];
     if(target){ e.preventDefault(); xlFocus(target, t.dataset.f); }
     return;
   }
-  if(e.key === 'ArrowLeft' && selS === 0 && selE === 0 && t.dataset.f === 'content'){ e.preventDefault(); xlFocus(row, 'category'); return; }
-  if(e.key === 'ArrowRight' && selS === t.value.length && selE === selS && t.dataset.f === 'category'){ e.preventDefault(); xlFocus(row, 'content', true); return; }
+  if(e.key === 'ArrowLeft' && t.dataset.f === 'content' && (nav || (selS === 0 && selE === 0))){ e.preventDefault(); xlFocus(row, 'category'); return; }
+  if(e.key === 'ArrowRight' && t.dataset.f === 'category' && (nav || (selS === t.value.length && selE === selS))){ e.preventDefault(); xlFocus(row, 'content', true); return; }
 });
 /* 엑셀에서 복사한 표 붙여넣기 → 여러 줄 한 번에 추가 */
 function xlParseTSV(str){
