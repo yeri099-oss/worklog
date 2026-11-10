@@ -166,6 +166,11 @@
   /* ===== Toolbar ===== */
   .toolbar{ display:flex; align-items:center; justify-content:space-between; margin: 4px 2px 10px; }
   .toolbar .count{ font-size:12px; color:var(--ink-soft); }
+  .share-bar{ display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin:-2px 0 12px; }
+  .share-label{ font-size:12px; color:var(--ink-soft); margin-right:2px; }
+  .share-btn, .xl-btn.share{ background:var(--seal); border:1px solid var(--seal); color:#fff; font-weight:700; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit; white-space:nowrap; box-shadow:0 1px 2px rgba(37,99,235,.25); }
+  .share-btn:hover, .xl-btn.share:hover{ background:#1D4ED8; border-color:#1D4ED8; }
+  .sheet .row-btns button.share-btn{ background:var(--seal); color:#fff; border-color:var(--seal); }
   .report-btn{
     display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--seal);
     background:var(--seal-soft); border:1px solid var(--seal); border-radius:8px; padding:6px 11px; cursor:pointer;
@@ -710,7 +715,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v009</span>
+      <span style="font-size:11px;color:#999">v010</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -742,7 +747,8 @@
       <button class="xl-btn" id="xlSearchBtn">검색</button>
       <button class="xl-btn danger" id="xlSearchClear" style="display:none;">✕ 검색 닫기</button>
       <input type="date" id="xlDateJump" title="날짜로 이동">
-      <button class="xl-btn" id="xlCopyBtn">📋 게시용 복사</button>
+      <button class="xl-btn share" id="xlCopyBtn" title="지금 보는 날짜를 표로 복사 → 게시판에 붙여넣기">📋 게시용 복사</button>
+      <button class="xl-btn share" id="xlImgBtn" title="미리보기 후 이미지로 복사">🖼 이미지로 복사</button>
       <button class="xl-btn" id="xlExcelBtn">📊 엑셀 저장</button>
       <button class="xl-btn" id="xlPlacesBtn">🗂 분류 관리</button>
       <select class="xl-btn" id="xlOwnerSel" style="display:none;" title="누구의 업무일지를 볼지 선택 (관리자)"></select>
@@ -827,8 +833,12 @@
     <span class="count" id="entryCount"></span>
     <div style="display:flex; gap:8px;">
       <div class="report-btn" id="exportBtn">📊 엑셀로 내보내기</div>
-      <div class="report-btn" id="reportBtn">📋 오늘 업무 보고 만들기</div>
     </div>
+  </div>
+  <div class="share-bar">
+    <span class="share-label">오늘 업무 보고</span>
+    <button class="share-btn" id="postCopyBtn" title="오늘 업무를 표로 복사 → 게시판에 붙여넣기">📋 게시용 복사</button>
+    <button class="share-btn" id="reportBtn" title="미리보기 후 이미지로 복사 (날짜 선택 가능)">🖼 이미지로 복사</button>
   </div>
   <div id="listWrap"></div>
 </div>
@@ -1098,7 +1108,8 @@
     </div>
     <div class="row-btns">
       <button id="reportTextCopy">텍스트 복사</button>
-      <button class="primary" id="reportImgCopy">이미지로 복사</button>
+      <button class="share-btn" id="reportPostCopy">📋 게시용 복사</button>
+      <button class="primary" id="reportImgCopy">🖼 이미지로 복사</button>
     </div>
   </div>
 </div>
@@ -2134,12 +2145,13 @@ document.getElementById('exportBtn').onclick = ()=>{
 };
 /* ============ Report ============ */
 let reportDate = todayStr();
-document.getElementById('reportBtn').onclick = ()=>{
-  reportDate = todayStr();
+function openReportModal(d){
+  reportDate = d || todayStr();
   document.getElementById('reportDatePicker').value = reportDate;
   document.getElementById('reportOverlay').classList.add('open');
   buildReport();
-};
+}
+document.getElementById('reportBtn').onclick = ()=> openReportModal(todayStr());
 document.getElementById('reportDatePicker').onchange = (e)=>{ reportDate = e.target.value; buildReport(); };
 document.getElementById('reportClose').onclick = ()=>{ document.getElementById('reportOverlay').classList.remove('open'); };
 document.getElementById('reportOverlay').addEventListener('click', (e)=>{ if(e.target.id==='reportOverlay') e.currentTarget.classList.remove('open'); });
@@ -2147,6 +2159,15 @@ function buildReport(){
   const {day, wd, month, year} = fmtLabel(reportDate);
   document.getElementById('reportTitleText').textContent = `${month}월 ${day}일 업무 보고`;
   document.getElementById('reportCaptureTitle').textContent = `${year}년 ${month}월 ${day}일 (${wd}) 업무일지`;
+  const cap = document.getElementById('reportCapture');
+  if(typeof viewMode !== 'undefined' && viewMode === 'excel'){
+    // 엑셀형: 게시용 복사와 같은 표 모양(분류 포함)으로 이미지 생성
+    cap.style.width = 'max-content'; cap.style.minWidth = '600px';
+    const has = xlMine().some(e=> e.date === reportDate);
+    document.getElementById('reportCaptureBody').innerHTML = has ? xlBuildPostHtml(reportDate, true) : `<div class="rc-empty">기록된 업무가 없습니다.</div>`;
+    return;
+  }
+  cap.style.width = ''; cap.style.minWidth = '';
   const entries = allEntries.filter(e=>e.date===reportDate && (!currentUser || e.ownerUid===currentUser.uid)).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
   const bodyEl = document.getElementById('reportCaptureBody');
   if(!entries.length){
@@ -3851,6 +3872,7 @@ function stopPrefsSync(){
 }
 function applyViewMode(mode){
   viewMode = mode === 'excel' ? 'excel' : 'basic';
+  if(viewMode === 'basic') xlOwner = null; // 기본형은 항상 내 일지 기준
   document.getElementById('tabWorklog').classList.toggle('xl-mode', viewMode==='excel');
   document.body.classList.toggle('xl-wide', viewMode==='excel');
   [...document.querySelectorAll('#viewModeSeg button')].forEach(b=> b.classList.toggle('active', b.dataset.m===viewMode));
@@ -4457,24 +4479,27 @@ const XL_STATUS_STYLE = {
 function xlDayRows(d){
   return xlGroups(sortEntries(xlMine().filter(e=>e.date===d))).filter(g=>g.entries.length);
 }
-function xlBuildPostHtml(d){
+function xlPostContent(e){ return (e.content||'') + (e.inspection ? '\n점검 · ' + e.inspection : ''); }
+function xlBuildPostHtml(d, noTitle){
   // 엑셀에서 복사한 표처럼: 칸 폭 고정 + 줄바꿈 안 함 → 게시판(플로우 등)에서 길면 가로 스크롤
   const {year, month, day, wd} = fmtLabel(d);
   const groups = xlDayRows(d);
+  const showPlace = groups.some(g=> g.place);  // 분류를 안 쓰는 일지(기본형)는 분류 칸 없이
   const font = '14px "Malgun Gothic", "맑은 고딕", sans-serif';
   const w = (texts, min, max)=> Math.round(Math.min(max, Math.max(min, ...texts.map(t=> xlTextWidth(t||'', font) + 24))));
   const all = groups.flatMap(g=> g.entries);
   const W = [
     w(groups.map(g=> g.place || '공통').concat(['분류']), 70, 200),
     w(all.map(e=> e.category).concat(['제목']), 90, 320),
-    w(all.map(e=> e.content).concat(['내용']), 200, 2400),
+    w(all.map(e=> xlPostContent(e)).concat(['내용']), 200, 2400),
     70
   ];
+  if(!showPlace) W[0] = 0;
   const total = W.reduce((x,y)=>x+y, 0);
   const td = 'border:1px solid #CBD2D9; padding:6px 10px; font-size:14px; vertical-align:middle; white-space:nowrap;';
   const th = td + 'background:#F3F4F6; font-weight:bold;';
   const nl = (t)=> escapeHtml(t||'').replace(/\n/g,'<br>');
-  const cell = (i, style, html, extra)=> `<td nowrap width="${W[i]}" style="${style} width:${W[i]}px;"${extra||''}>${html}</td>`;
+  const cell = (i, style, html, extra)=> W[i] ? `<td nowrap width="${W[i]}" style="${style} width:${W[i]}px;"${extra||''}>${html}</td>` : '';
   let rows = '<tr>' + cell(0, th+'text-align:center;', '분류') + cell(1, th, '제목') + cell(2, th, '내용') + cell(3, th+'text-align:center;', '상태') + '</tr>';
   groups.forEach(g=>{
     g.entries.forEach((e,i)=>{
@@ -4482,25 +4507,25 @@ function xlBuildPostHtml(d){
       rows += '<tr>'
         + (i===0 ? cell(0, td+'font-weight:bold; text-align:center; background:#FAFAFB;', g.place ? escapeHtml(g.place) : '공통', ` rowspan="${g.entries.length}"`) : '')
         + cell(1, td, nl(e.category))
-        + cell(2, td, nl(e.content))
+        + cell(2, td, nl(xlPostContent(e)))
         + cell(3, td+`text-align:center; background:${st[0]}; color:${st[1]};`, escapeHtml(e.note||''))
         + '</tr>';
     });
   });
-  return `<p style="font-size:15px; margin:0 0 8px;"><b>${year}년 ${month}월 ${day}일 ${wd}요일</b></p>`
+  return (noTitle ? '' : `<p style="font-size:15px; margin:0 0 8px;"><b>${year}년 ${month}월 ${day}일 ${wd}요일</b></p>`)
     + `<table border="1" cellspacing="0" cellpadding="0" width="${total}" style="border-collapse:collapse; table-layout:fixed; width:${total}px;">`
-    + `<colgroup>${W.map(x=>`<col width="${x}" style="width:${x}px;">`).join('')}</colgroup>`
+    + `<colgroup>${W.filter(x=>x).map(x=>`<col width="${x}" style="width:${x}px;">`).join('')}</colgroup>`
     + `<tbody>${rows}</tbody></table>`;
 }
 function xlBuildPostText(d){
   const {year, month, day, wd} = fmtLabel(d);
-  const lines = [`${year}년 ${month}월 ${day}일 ${wd}요일`, ['분류','제목','내용','상태'].join('\t')];
-  xlDayRows(d).forEach(g=> g.entries.forEach(e=> lines.push([g.place||'공통', e.category||'', (e.content||'').replace(/\n/g,' '), e.note||''].join('\t'))));
+  const groups = xlDayRows(d), showPlace = groups.some(g=> g.place);
+  const lines = [`${year}년 ${month}월 ${day}일 ${wd}요일`, (showPlace ? ['분류','제목','내용','상태'] : ['제목','내용','상태']).join('\t')];
+  groups.forEach(g=> g.entries.forEach(e=> lines.push((showPlace ? [g.place||'공통'] : []).concat([e.category||'', xlPostContent(e).replace(/\n/g,' '), e.note||'']).join('\t'))));
   return lines.join('\n');
 }
-document.getElementById('xlCopyBtn').onclick = async ()=>{
-  const d = xlDate;
-  if(!xlMine().some(e=>e.date===d)){ alert('이 날짜에 쓴 일지가 없어요.'); return; }
+async function copyPostTable(d){
+  if(!xlMine().some(e=>e.date===d)){ const f = fmtLabel(d); alert(`${f.month}월 ${f.day}일에 쓴 일지가 없어요.`); return; }
   const html = xlBuildPostHtml(d), text = xlBuildPostText(d);
   let ok = false;
   try{
@@ -4523,9 +4548,14 @@ document.getElementById('xlCopyBtn').onclick = async ()=>{
     try{ ok = document.execCommand('copy'); }catch(err){ ok = false; }
     sel.removeAllRanges(); box.remove();
   }
-  if(ok){ showToast('표로 복사됐어요 — 게시판 글쓰기에 붙여넣기(Ctrl+V) 하세요'); logAction('업무일지 게시용 복사', d); }
+  const f = fmtLabel(d);
+  if(ok){ showToast(`${f.month}/${f.day} 업무를 표로 복사했어요 — 게시판에 붙여넣기(Ctrl+V)`); logAction('업무일지 게시용 복사', d); }
   else alert('복사에 실패했어요. 다른 브라우저(크롬)에서 다시 시도해주세요.');
-};
+}
+document.getElementById('xlCopyBtn').onclick = ()=> copyPostTable(xlDate);
+document.getElementById('xlImgBtn').onclick = ()=> openReportModal(xlDate);
+document.getElementById('postCopyBtn').onclick = ()=> copyPostTable(todayStr());
+document.getElementById('reportPostCopy').onclick = ()=> copyPostTable(reportDate);
 /* ---- 엑셀 저장: 그 달 일지를 하루에 시트 하나씩 ---- */
 document.getElementById('xlExcelBtn').onclick = ()=>{
   if(typeof XLSX === 'undefined' || !XLSX.utils){ alert('엑셀 기능을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
