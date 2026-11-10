@@ -373,7 +373,7 @@
   /* ===== Settings ===== */
   .settings-card{ background:var(--paper-raised); border:1px solid var(--rule); border-radius:14px; box-shadow:var(--shadow); padding:14px; margin-bottom:16px; }
   .settings-card h4{ font-family:'Pretendard-Regular','Pretendard',sans-serif; font-size:14px; margin:0 0 12px; }
-  .acct-row{ display:flex; align-items:center; gap:8px; padding:9px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
+  .acct-row{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; padding:9px 2px; border-bottom:1px dashed var(--rule); font-size:13px; }
   .acct-row:last-child{ border-bottom:none; }
   .acct-row .id{ font-weight:600; }
   .acct-row .del{ margin-left:auto; }
@@ -636,6 +636,8 @@
   .xl-del:hover{ opacity:1; color:var(--danger); }
   .xl-add{ align-self:flex-start; margin:5px 6px; border:1px dashed var(--rule-strong); background:transparent; border-radius:6px; font-size:12px; padding:4px 10px; cursor:pointer; color:var(--ink-soft); font-family:inherit; }
   .xl-add:hover{ color:var(--seal); border-color:var(--seal); }
+  .xl-other-banner{ background:var(--amber-soft); border:1px solid var(--amber); color:#8A4B00; border-radius:8px; padding:8px 12px; font-size:12.5px; margin-bottom:10px; }
+  select.xl-btn{ max-width:220px; }
   .xl-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5; }
   .xl-results .xl-res{ display:flex; border-bottom:1px solid var(--rule); font-size:13px; cursor:pointer; }
   .xl-results .xl-res:hover{ background:var(--seal-soft); }
@@ -708,7 +710,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v007</span>
+      <span style="font-size:11px;color:#999">v008</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -743,6 +745,7 @@
       <button class="xl-btn" id="xlCopyBtn">📋 게시용 복사</button>
       <button class="xl-btn" id="xlExcelBtn">📊 엑셀 저장</button>
       <button class="xl-btn" id="xlPlacesBtn">🗂 분류 관리</button>
+      <select class="xl-btn" id="xlOwnerSel" style="display:none;" title="누구의 업무일지를 볼지 선택 (관리자)"></select>
     </div>
     <div class="xl-tabs-wrap">
       <div class="xl-month"><button id="xlPrevMonth" title="이전 달">‹</button><span id="xlMonthLabel"></span><button id="xlNextMonth" title="다음 달">›</button><button class="xl-today" id="xlTodayBtn" title="오늘 일지로 이동">오늘</button></div>
@@ -2348,7 +2351,7 @@ function teardownSubscriptions(){
 let signupInProgress = false;
 auth.onAuthStateChanged(async (user)=>{
   if(bootstrapping || signupInProgress) return;
-  if(!user){ currentUser = null; teardownSubscriptions(); showLogin(); return; }
+  if(!user){ currentUser = null; teardownSubscriptions(); const m = loginBlockMsg; loginBlockMsg = ''; showLogin(m); return; }
   try{
     const doc = await PROFILES.doc(user.uid).get();
     if(!doc.exists){
@@ -2359,6 +2362,15 @@ auth.onAuthStateChanged(async (user)=>{
     if(doc.data().approved === false){
       await auth.signOut();
       showLogin('가입 승인 대기 중입니다. 관리자 승인 후 이용할 수 있어요.');
+      return;
+    }
+    const typedId = pendingLoginId; pendingLoginId = null;
+    if(typedId && doc.data().id && String(doc.data().id).toLowerCase() !== typedId){
+      // 아이디를 바꾼 계정에 옛 아이디로 로그인한 경우 → 차단
+      pendingLoginLog = false;
+      loginBlockMsg = '아이디 또는 비밀번호가 올바르지 않습니다.';
+      await auth.signOut();
+      showLogin(loginBlockMsg);
       return;
     }
     currentUser = { uid: user.uid, id: doc.data().id, role: doc.data().role, displayName: doc.data().displayName || doc.data().name || doc.data().id };
@@ -2403,6 +2415,8 @@ document.getElementById('loginBtn').onclick = doLogin;
 document.getElementById('loginPw').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 document.getElementById('loginId').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 let pendingLoginLog = false;
+let loginBlockMsg = '';
+let pendingLoginId = null; // 로그인 창에 입력한 아이디 (아이디 변경 후 옛 아이디 로그인 차단용)
 async function resolveAuthEmail(id){
   try{
     const doc = await LOGIN.doc(id.toLowerCase()).get();
@@ -2425,9 +2439,11 @@ async function doLogin(){
   try{
     const authEmail = await resolveAuthEmail(id);
     pendingLoginLog = true;
+    pendingLoginId = id.toLowerCase();
     await auth.signInWithEmailAndPassword(authEmail, pw);
   }catch(e){
     pendingLoginLog = false;
+    pendingLoginId = null;
     errEl.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
   }finally{
     btn.disabled = false; btn.textContent = '로그인';
@@ -2609,7 +2625,9 @@ function renderAccounts(){
       <span class="id">${escapeHtml(displayName)}${displayName!==a.id ? ` <span style="font-weight:400; color:var(--ink-soft); font-size:11px;">(${escapeHtml(a.id)})</span>` : ''}</span>
       <span class="role-tag ${a.role==='admin'?'admin':''}">${a.role==='admin'?'관리자':'일반'}</span>
       <button class="del-btn" data-action="name" data-uid="${escapeAttr(a.uid)}" data-name="${escapeAttr(displayName)}" data-id="${escapeAttr(a.id)}" style="color:var(--seal); background:var(--seal-soft); border-color:var(--seal);">이름수정</button>
-      ${isLastAdmin ? '' : `<button class="del-btn" data-action="del" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}">삭제</button>`}
+      <button class="del-btn" data-action="rename-id" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}" style="margin-left:0; color:var(--ink); background:var(--paper); border-color:var(--rule-strong);">아이디변경</button>
+      ${isLastAdmin ? '' : `<button class="del-btn" data-action="role" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}" data-role="${a.role==='admin'?'admin':'user'}" style="margin-left:0; color:var(--amber); background:var(--amber-soft); border-color:var(--amber);">${a.role==='admin'?'일반으로':'관리자로'}</button>`}
+      ${isLastAdmin ? '' : `<button class="del-btn" data-action="del" data-uid="${escapeAttr(a.uid)}" data-id="${escapeAttr(a.id)}" style="margin-left:0;">삭제</button>`}
     </div>`;
   }).join('');
 }
@@ -2677,6 +2695,41 @@ document.getElementById('acctList').addEventListener('click', async (e)=>{
   const uid = btn.dataset.uid;
   if(btn.dataset.action === 'name'){
     openNameChangeModal(uid, btn.dataset.name, btn.dataset.id);
+    return;
+  }
+  if(btn.dataset.action === 'role'){
+    const toAdmin = btn.dataset.role !== 'admin';
+    const self = currentUser && uid === currentUser.uid;
+    const msg = toAdmin
+      ? `'${btn.dataset.id}' 계정에 관리자 권한을 줄까요?\n(설정 탭, 모든 계정 일지 보기 등을 쓸 수 있어요)`
+      : `'${btn.dataset.id}' 계정을 일반 계정으로 바꿀까요?` + (self ? '\n\n⚠️ 지금 로그인한 내 계정이에요. 바꾸면 설정 탭을 더 이상 쓸 수 없어요.' : '');
+    if(!await customConfirm(msg, { okLabel: toAdmin ? '관리자로' : '일반으로' })) return;
+    try{
+      await PROFILES.doc(uid).update({ role: toAdmin ? 'admin' : 'user' });
+      logAction('권한 변경', `${btn.dataset.id} → ${toAdmin ? '관리자' : '일반'}`);
+      if(self && !toAdmin){ alert('일반 계정으로 바뀌었어요. 다시 로그인해주세요.'); await auth.signOut(); }
+    }catch(err){ alert('권한 변경 실패: ' + err.message); }
+    return;
+  }
+  if(btn.dataset.action === 'rename-id'){
+    const oldId = btn.dataset.id;
+    const newId = (prompt(`'${oldId}' 계정의 새 아이디를 입력하세요.\n(영문, 숫자, -, _ / 비밀번호는 그대로예요)`, '') || '').trim();
+    if(!newId || newId.toLowerCase() === String(oldId).toLowerCase()) return;
+    if(!/^[a-zA-Z0-9_-]+$/.test(newId)){ alert('아이디는 영문, 숫자, -, _ 만 사용할 수 있습니다.'); return; }
+    try{
+      const exists = await LOGIN.doc(newId.toLowerCase()).get();
+      if(exists.exists || accountsCache.some(a=> String(a.id||'').toLowerCase() === newId.toLowerCase())){ alert('이미 사용 중인 아이디입니다.'); return; }
+      const acct = accountsCache.find(a=> a.uid === uid) || {};
+      let authEmail = acct.authEmail;
+      if(!authEmail){ const old = await LOGIN.doc(String(oldId).toLowerCase()).get(); authEmail = old.exists ? old.data().authEmail : toPseudoEmail(oldId); }
+      if(!await customConfirm(`아이디를 '${oldId}' → '${newId}' 로 바꿀까요?\n\n바꾼 뒤에는 '${oldId}'(으)로는 로그인할 수 없고, '${newId}' + 기존 비밀번호로 로그인해요.`, { okLabel:'변경' })) return;
+      await LOGIN.doc(newId.toLowerCase()).set({ authEmail });
+      await PROFILES.doc(uid).update({ id: newId, authEmail });
+      try{ await LOGIN.doc(String(oldId).toLowerCase()).delete(); }catch(e){ /* 옛 아이디 조회 문서 삭제 실패해도 로그인 시 아이디 확인으로 차단됨 */ }
+      logAction('아이디 변경', `${oldId} → ${newId}`);
+      if(currentUser && uid === currentUser.uid) currentUser.id = newId;
+      showToast(`아이디를 '${newId}' 로 바꿨어요 ✓`);
+    }catch(err){ alert('아이디 변경 실패: ' + err.message); }
     return;
   }
   const id = btn.dataset.id;
@@ -3753,7 +3806,22 @@ let xlPendingRender = false;
 let pwForced = false;
 let xlDragging = null;
 let xlPointerDown = false;
+let xlOwner = null;            // 관리자가 보고 있는 다른 계정 uid (null = 내 일지)
+const xlOtherPlaces = {};      // 다른 계정의 분류 목록 캐시
+function xlOwnerUid(){ return xlOwner || (currentUser && currentUser.uid); }
+function xlIsOther(){ return !!xlOwner && currentUser && xlOwner !== currentUser.uid; }
+function xlOwnerName(){
+  if(!xlIsOther()) return currentUser.displayName;
+  const a = (typeof accountsCache !== 'undefined' ? accountsCache : []).find(x=>x.uid===xlOwner);
+  if(a) return a.displayName || a.name || a.id;
+  const e = allEntries.find(x=>x.ownerUid===xlOwner);
+  return (e && e.ownerName) || '';
+}
 function xlPlaces(){
+  if(xlIsOther()){
+    if(xlOtherPlaces[xlOwner] && xlOtherPlaces[xlOwner].length) return xlOtherPlaces[xlOwner];
+    return DEFAULT_PLACES;
+  }
   return (userPrefs && Array.isArray(userPrefs.places) && userPrefs.places.length) ? userPrefs.places : DEFAULT_PLACES;
 }
 function savePrefs(patch){
@@ -3779,7 +3847,7 @@ function localStorageHasMode(){
 }
 function stopPrefsSync(){
   if(unsubPrefs){ unsubPrefs(); unsubPrefs = null; }
-  userPrefs = null; xlDrafts = []; xlSearch = ''; pwForced = false;
+  userPrefs = null; xlDrafts = []; xlSearch = ''; pwForced = false; xlOwner = null;
 }
 function applyViewMode(mode){
   viewMode = mode === 'excel' ? 'excel' : 'basic';
@@ -3814,8 +3882,35 @@ function onPwChanged(){
 }
 /* ---- 그리기 ---- */
 function xlMine(){
-  return allEntries.filter(e=> currentUser && e.ownerUid === currentUser.uid);
+  const uid = xlOwnerUid();
+  return allEntries.filter(e=> currentUser && e.ownerUid === uid);
 }
+function xlRenderOwnerSel(){
+  const sel = document.getElementById('xlOwnerSel');
+  if(!currentUser || currentUser.role !== 'admin'){ sel.style.display = 'none'; xlOwner = null; return; }
+  const map = new Map();
+  map.set(currentUser.uid, '내 일지 (' + currentUser.displayName + ')');
+  (typeof accountsCache !== 'undefined' ? accountsCache : []).filter(a=>a.approved !== false).forEach(a=>{ if(!map.has(a.uid)) map.set(a.uid, a.displayName || a.name || a.id); });
+  allEntries.forEach(e=>{ if(e.ownerUid && !map.has(e.ownerUid)) map.set(e.ownerUid, e.ownerName || '(이름 없음)'); });
+  const cur = xlOwnerUid();
+  const html = [...map.entries()].map(([uid,name])=>`<option value="${escapeAttr(uid)}" ${uid===cur?'selected':''}>👤 ${escapeHtml(name)}</option>`).join('');
+  if(sel.dataset.html !== html){ sel.innerHTML = html; sel.dataset.html = html; }
+  sel.value = cur;
+  sel.style.display = '';
+}
+document.getElementById('xlOwnerSel').addEventListener('change', async (e)=>{
+  const uid = e.target.value;
+  xlOwner = (uid === currentUser.uid) ? null : uid;
+  xlDrafts = []; xlSearch = ''; document.getElementById('xlSearchInput').value = '';
+  if(xlOwner && !xlOtherPlaces[xlOwner]){
+    xlOtherPlaces[xlOwner] = [];
+    try{ const d = await RECURRING.doc(xlOwner).get(); if(d.exists && Array.isArray(d.data().places)) xlOtherPlaces[xlOwner] = d.data().places; }catch(err){}
+  }
+  // 그 사람이 마지막으로 쓴 날짜로 이동
+  const dates = xlMine().map(x=>x.date).sort();
+  xlDate = dates.includes(todayStr()) || !dates.length ? todayStr() : dates[dates.length-1];
+  renderXl(true);
+});
 function xlDateLabel(d){
   const {month, day, wd} = fmtLabel(d);
   return `${String(month).padStart(2,'0')}.${String(day).padStart(2,'0')}(${wd})`;
@@ -3847,6 +3942,9 @@ function renderXl(force){
   if(!force && ae && ae.classList && ae.classList.contains('xl-in') && sheet.contains(ae)){ xlPendingRender = true; return; }
   if(xlDragging) { xlPendingRender = true; return; }
   xlPendingRender = false;
+  xlRenderOwnerSel();
+  const other = xlIsOther();
+  document.getElementById('xlPlacesBtn').style.display = other ? 'none' : '';
   const mine = xlMine();
   // 날짜 탭 (선택한 날짜의 달)
   const month = xlDate.slice(0,7);
@@ -3868,12 +3966,13 @@ function renderXl(force){
   const dayEntries = sortEntries(mine.filter(e=>e.date===xlDate));
   const groups = xlGroups(dayEntries);
   sheet.innerHTML = `
+    ${other ? `<div class="xl-other-banner">👀 <b>${escapeHtml(xlOwnerName())}</b> 님의 업무일지를 보고 있어요 — 여기서 고치면 그 계정 일지가 바뀌어요</div>` : ''}
     <div class="xl-title">${year}년 ${mm}월 ${day}일 ${wd}요일 ${xlDate===today?'<small>오늘</small>':''}</div>
     <div class="xl-table">
       <div class="xl-head"><span class="xl-w-place">분류</span><span class="xl-w-cat">제목</span><span class="xl-w-content">내용</span><span class="xl-w-status">상태</span></div>
       ${groups.map(g=>`
         <div class="xl-group">
-          <div class="xl-place ${g.place?'':'etc'}"><textarea class="xl-in xl-pin" rows="1" data-old="${escapeHtml(g.place)}" placeholder="공통" title="눌러서 분류 이름 수정">${escapeHtml(g.place)}</textarea></div>
+          <div class="xl-place ${g.place?'':'etc'}"><textarea class="xl-in xl-pin" rows="1" data-old="${escapeHtml(g.place)}" placeholder="공통" ${other ? 'readonly tabindex="-1" title="다른 계정의 분류 이름은 바꿀 수 없어요"' : 'title="눌러서 분류 이름 수정"'}>${escapeHtml(g.place)}</textarea></div>
           <div class="xl-col">
             <div class="xl-rows" data-place="${escapeHtml(g.place)}">
               ${g.entries.map(e=>xlRowHtml(e)).join('')}
@@ -3882,10 +3981,10 @@ function renderXl(force){
             <button class="xl-add" data-place="${escapeHtml(g.place)}">+ 추가</button>
           </div>
         </div>`).join('')}
-      <div class="xl-group add-group">
+      ${other ? '' : `<div class="xl-group add-group">
         <div class="xl-place"><textarea class="xl-in xl-pin" rows="1" data-new="1" placeholder="+ 분류"></textarea></div>
         <div class="xl-col"><div class="xl-addgroup-hint">← 새 분류 이름을 쓰고 Enter</div></div>
-      </div>
+      </div>`}
     </div>
     <div class="xl-hint">칸을 눌러 바로 입력하면 자동 저장 · Enter: 아래 칸(마지막 줄이면 새 줄) · Shift+Enter / Alt+Enter: 줄바꿈 · ↑↓←→: 칸 이동 · Esc: 입력 취소<br>분류 이름 칸도 눌러서 바로 수정 · 엑셀에서 복사한 표(제목·내용·상태)를 칸에 붙여넣으면 여러 줄이 한 번에 들어가요 · ⠿ 를 끌어서 순서·분류 변경</div>`;
   xlFitWidths();
@@ -4009,8 +4108,8 @@ function xlCreateFromDraft(row, extra){
     content: row.querySelector('[data-f=content]').value.trim(),
     inspection: '', note: '', dueDate: '',
     place,
-    ownerUid: currentUser.uid,
-    ownerName: currentUser.displayName,
+    ownerUid: xlOwnerUid(),
+    ownerName: xlOwnerName(),
     seq: xlSeqForPlace(place),
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }, extra || {});
@@ -4164,12 +4263,12 @@ xlSheetEl.addEventListener('paste', async (e)=>{
   items.forEach(it=>{
     if(it.place && !list.includes(it.place)) list.push(it.place);
     const ref = ENTRIES.doc();
-    const data = Object.assign({ date: xlDate, inspection:'', dueDate:'', ownerUid: currentUser.uid, ownerName: currentUser.displayName,
+    const data = Object.assign({ date: xlDate, inspection:'', dueDate:'', ownerUid: xlOwnerUid(), ownerName: xlOwnerName(),
       seq: xlSeqForPlace(it.place), createdAt: firebase.firestore.FieldValue.serverTimestamp() }, it);
     allEntries.push(Object.assign({ id: ref.id }, data));
     batch.set(ref, data);
   });
-  if(list.length !== xlPlaces().length) await savePrefs({ places: list });
+  if(list.length !== xlPlaces().length && !xlIsOther()) await savePrefs({ places: list });
   try{ await batch.commit(); logAction('업무일지 붙여넣기(엑셀형)', `${xlDate} ${items.length}줄`); showToast(`${items.length}줄을 붙여넣었어요 ✓`); }
   catch(err){ alert('붙여넣기 실패: ' + err.message); }
   renderXl(true);
@@ -4276,6 +4375,7 @@ async function xlRenamePlace(oldName, newName){
   showToast(`'${oldName}' → '${newName}' 로 바꿨어요 (지난 일지 포함)`);
 }
 async function xlSavePlaceCell(t){
+  if(xlIsOther() || t.readOnly) return;
   const name = t.value.replace(/\s+/g,' ').trim();
   if(t.dataset.new){
     if(!name) return;
