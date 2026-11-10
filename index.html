@@ -721,7 +721,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v015</span>
+      <span style="font-size:11px;color:#999">v016</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -753,8 +753,7 @@
       <button class="xl-btn" id="xlSearchBtn">검색</button>
       <button class="xl-btn danger" id="xlSearchClear" style="display:none;">✕ 검색 닫기</button>
       <input type="date" id="xlDateJump" title="날짜로 이동">
-      <button class="xl-btn share" id="xlCopyBtn" title="지금 보는 날짜를 표로 복사 → 게시판에 붙여넣기">📋 게시용 복사</button>
-      <button class="xl-btn share" id="xlImgBtn" title="미리보기 후 이미지로 복사">🖼 이미지로 복사</button>
+      <button class="xl-btn share" id="xlReportBtn" title="미리보기에서 게시글로 복사 / 이미지로 복사 선택">📤 업무보고 내보내기</button>
       <button class="xl-btn" id="xlExcelBtn">📊 엑셀 저장</button>
       <button class="xl-btn" id="xlPlacesBtn">🗂 분류 관리</button>
       <select class="xl-btn" id="xlOwnerSel" style="display:none;" title="누구의 업무일지를 볼지 선택 (관리자)"></select>
@@ -839,12 +838,8 @@
     <span class="count" id="entryCount"></span>
     <div style="display:flex; gap:8px;">
       <div class="report-btn" id="exportBtn">📊 엑셀로 내보내기</div>
+      <button class="share-btn" id="reportBtn" title="미리보기에서 게시글로 복사 / 이미지로 복사 선택">📤 업무보고 내보내기</button>
     </div>
-  </div>
-  <div class="share-bar">
-    <span class="share-label">오늘 업무 보고</span>
-    <button class="share-btn" id="postCopyBtn" title="오늘 업무를 표로 복사 → 게시판에 붙여넣기">📋 게시용 복사</button>
-    <button class="share-btn" id="reportBtn" title="미리보기 후 이미지로 복사 (날짜 선택 가능)">🖼 이미지로 복사</button>
   </div>
   <div id="listWrap"></div>
 </div>
@@ -1114,7 +1109,7 @@
     </div>
     <div class="row-btns">
       <button id="reportTextCopy">텍스트 복사</button>
-      <button class="share-btn" id="reportPostCopy">📋 게시용 복사</button>
+      <button class="share-btn" id="reportPostCopy">📋 게시글로 복사</button>
       <button class="primary" id="reportImgCopy">🖼 이미지로 복사</button>
     </div>
   </div>
@@ -4567,9 +4562,7 @@ async function copyPostTable(d){
   if(ok){ showToast(`${f.month}/${f.day} 업무를 표로 복사했어요 — 게시판에 붙여넣기(Ctrl+V)`); logAction('업무일지 게시용 복사', d); }
   else alert('복사에 실패했어요. 다른 브라우저(크롬)에서 다시 시도해주세요.');
 }
-document.getElementById('xlCopyBtn').onclick = ()=> copyPostTable(xlDate);
-document.getElementById('xlImgBtn').onclick = ()=> openReportModal(xlDate);
-document.getElementById('postCopyBtn').onclick = ()=> copyPostTable(todayStr());
+document.getElementById('xlReportBtn').onclick = ()=> openReportModal(xlDate);
 document.getElementById('reportPostCopy').onclick = ()=> copyPostTable(reportDate);
 /* ---- 엑셀 저장: 그 달 일지를 하루에 시트 하나씩 ---- */
 document.getElementById('xlExcelBtn').onclick = ()=>{
