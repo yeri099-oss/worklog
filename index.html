@@ -744,7 +744,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v019</span>
+      <span style="font-size:11px;color:#999">v020</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -4328,10 +4328,10 @@ xlSheetEl.addEventListener('paste', async (e)=>{
   const list = xlPlaces().slice();
   const items = parsed.map(r=>{
     let place = basePlace, cat, con, st;
-    if(r.length >= 4){ [place, cat, con, st] = r; if(!place) place = basePlace; }
+    if(r.length >= 4){ [place, cat, con, st] = r; if(!place) place = basePlace; if(place === '공통') place = ''; }
     else if(r.length === 3){ [cat, con, st] = r; }
     else { [cat, con] = r; st = ''; }
-    if(st && !STATUS_LIST.includes(st)){ con = [con, st].filter(Boolean).join(' '); st = ''; }
+    if(st && !STATUS_LIST.includes(st)){ const m = impStatus(st); if(m) st = m; else { con = [con, st].filter(Boolean).join(' '); st = ''; } } // '하는 중' 등도 상태로
     return { place, category: cat||'', content: con||'', note: st||'' };
   });
   if(!await customConfirm(`엑셀에서 복사한 ${items.length}줄을 추가할까요?\n\n` + items.slice(0,5).map(it=>`· ${it.place ? '['+it.place+'] ' : ''}${it.category} ${it.content.slice(0,30)}`).join('\n') + (items.length>5 ? `\n… 외 ${items.length-5}줄` : ''), { okLabel:'추가' })) return;
