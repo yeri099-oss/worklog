@@ -649,6 +649,16 @@
   .xl-add:hover{ color:var(--seal); border-color:var(--seal); }
   .xl-other-banner{ background:var(--amber-soft); border:1px solid var(--amber); color:#8A4B00; border-radius:8px; padding:8px 12px; font-size:12.5px; margin-bottom:10px; }
   select.xl-btn{ max-width:220px; }
+  .xl-raw{ margin-top:16px; border:1px solid var(--rule-strong); border-radius:10px; overflow:hidden; }
+  .xl-raw-head{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--export-soft); font-size:13px; font-weight:700; color:var(--export); }
+  .xl-raw-head small{ font-weight:400; color:var(--ink-soft); }
+  .xl-raw-scroll{ overflow:auto; max-height:70vh; }
+  .xl-raw table{ border-collapse:collapse; font-size:13px; }
+  .xl-raw td{ border:1px solid var(--rule); padding:5px 9px; white-space:pre-wrap; vertical-align:top; min-width:40px; max-width:640px; }
+  .imp-mode{ display:flex; gap:8px; margin:6px 0 4px; flex-wrap:wrap; }
+  .imp-mode label{ flex:1; min-width:220px; border:1.5px solid var(--rule-strong); border-radius:10px; padding:8px 10px; font-size:12.5px; cursor:pointer; line-height:1.45; }
+  .imp-mode label.on{ border-color:var(--export); background:var(--export-soft); }
+  .imp-mode b{ font-size:13px; }
   .imp-opts{ display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; font-size:12.5px; margin:8px 0 10px; }
   .imp-opts input[type=number]{ width:80px; padding:4px 6px; font-size:13px; }
   .imp-days{ max-height:220px; overflow:auto; border:1px solid var(--rule-strong); border-radius:8px; }
@@ -734,7 +744,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v018</span>
+      <span style="font-size:11px;color:#999">v019</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -1057,7 +1067,7 @@
 <div class="overlay center-modal" id="xlImportOverlay">
   <div class="sheet" style="max-width:760px;">
     <h3>📥 엑셀 업무일지 가져오기 <span class="x" id="xlImportClose">닫기 ✕</span></h3>
-    <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 10px; line-height:1.55;">쓰시던 엑셀 파일을 고르면 <b>탭(시트)마다 그 날짜의 업무일지</b>로 들어가요. 저장 전에 아래에서 먼저 확인할 수 있어요.</p>
+    <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 10px; line-height:1.55;">쓰시던 엑셀 파일을 고르면 <b>탭(시트)·날짜별로 나눠</b> 그 날짜에 넣어요. 저장 전에 아래에서 먼저 확인할 수 있어요.</p>
     <input type="file" id="xlImportFile" accept=".xlsx,.xls,.xlsm,.csv" style="margin-bottom:10px; font-size:13px;">
     <div id="xlImportBody"></div>
   </div>
@@ -1187,6 +1197,7 @@ let categories = [...DEFAULT_CATS];
 let selectedDate = todayStr();
 let selectedStatus = '';
 let allEntries = []; // live from Firestore, sorted date desc
+let allSheets = [];  // 엑셀에서 가져온 날짜별 원본 (kind:'sheet')
 let editingId = null;
 let listMode = 'month'; // 'month' | 'search' | 'date'
 let currentMonth = todayStr().slice(0,7); // 'YYYY-MM'
@@ -1539,7 +1550,9 @@ function startEntriesSync(){
     ? ENTRIES.orderBy('date','desc')
     : ENTRIES.where('ownerUid','==', currentUser.uid); // 단일 필드 조건이라 별도 색인 없이 동작, 정렬은 클라이언트에서
   unsubEntries = query.onSnapshot(snap=>{
-    allEntries = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    const docs = snap.docs.map(d=>({id:d.id, ...d.data()}));
+    allEntries = docs.filter(d=> d.kind !== 'sheet');   // 가져온 엑셀 원본은 업무 목록에서 제외
+    allSheets = docs.filter(d=> d.kind === 'sheet');
     if(!isAdminUser){
       allEntries.sort((a,b)=> a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
     }
@@ -3926,6 +3939,22 @@ function xlMine(){
   const uid = xlOwnerUid();
   return allEntries.filter(e=> currentUser && e.ownerUid === uid);
 }
+function xlMySheets(){
+  const uid = xlOwnerUid();
+  return allSheets.filter(x=> currentUser && x.ownerUid === uid);
+}
+function xlSheetRows(x){ try{ return JSON.parse(x.rowsJson || '[]'); }catch(e){ return []; } }
+function xlRawHtml(d){
+  const sh = xlMySheets().find(x=> x.date === d);
+  if(!sh) return '';
+  const rows = xlSheetRows(sh);
+  const ncol = Math.max(1, ...rows.map(r=>r.length));
+  return `<div class="xl-raw">
+    <div class="xl-raw-head">📎 가져온 엑셀 원본 <small>${escapeHtml(sh.fileName||'')}${sh.sheetName ? ' · 탭 ' + escapeHtml(sh.sheetName) : ''}</small>
+      <button class="xl-btn" data-rawdel="${escapeAttr(sh.id)}" style="margin-left:auto; padding:4px 10px; font-size:12px;">원본 삭제</button></div>
+    <div class="xl-raw-scroll"><table>${rows.map(r=>'<tr>' + Array.from({length:ncol}, (_,i)=>`<td>${escapeHtml(r[i]||'')}</td>`).join('') + '</tr>').join('')}</table></div>
+  </div>`;
+}
 function xlRenderOwnerSel(){
   const sel = document.getElementById('xlOwnerSel');
   if(!currentUser || currentUser.role !== 'admin'){ sel.style.display = 'none'; xlOwner = null; return; }
@@ -3989,7 +4018,7 @@ function renderXl(force){
   const {year, month: mm} = fmtLabel(xlDate);
   document.getElementById('xlMonthLabel').textContent = `${year}.${String(mm).padStart(2,'0')}`;
   const today = todayStr();
-  const dset = new Set(mine.filter(e=>e.date.slice(0,7)===month).map(e=>e.date));
+  const dset = new Set(mine.filter(e=>e.date.slice(0,7)===month).map(e=>e.date).concat(xlMySheets().filter(x=>x.date.slice(0,7)===month).map(x=>x.date)));
   dset.add(xlDate);
   if(today.slice(0,7)===month) dset.add(today);
   const dates = [...dset].sort();
@@ -4024,7 +4053,8 @@ function renderXl(force){
         <div class="xl-col"><div class="xl-addgroup-hint">← 새 분류 이름을 쓰고 Enter</div></div>
       </div>`}
     </div>
-    <div class="xl-hint">Shift+Enter / Alt+Enter: 줄바꿈 · ↑↓←→: 칸 이동 · Esc: 입력 취소</div>`;
+    <div class="xl-hint">Shift+Enter / Alt+Enter: 줄바꿈 · ↑↓←→: 칸 이동 · Esc: 입력 취소</div>
+    ${xlRawHtml(xlDate)}`;
   xlFitWidths();
 }
 /* 내용 길이에 맞춰 칸을 가로로 넓힘 (화면 폭까지) */
@@ -4062,7 +4092,9 @@ function xlAlign(){
 window.addEventListener('resize', ()=>{ if(viewMode==='excel') xlFitWidths(); });
 function renderXlSearch(mine){
   const q = xlSearch.toLowerCase();
-  const hits = mine.filter(e=> ['category','content','place','note'].some(f=> (e[f]||'').toLowerCase().includes(q)))
+  const rawHits = [];
+  xlMySheets().forEach(x=> xlSheetRows(x).forEach(r=>{ const t = r.filter(Boolean).join('  '); if(t.toLowerCase().includes(q)) rawHits.push({ date:x.date, place:'📎 원본', category:'', content:t, note:'', seq:0 }); }));
+  const hits = mine.filter(e=> ['category','content','place','note'].some(f=> (e[f]||'').toLowerCase().includes(q))).concat(rawHits)
     .sort((a,b)=> a.date<b.date?1:a.date>b.date?-1:(a.seq||0)-(b.seq||0));
   const hl = (t)=>{
     const s = escapeHtml(t||'');
@@ -4108,7 +4140,7 @@ function xlShiftMonth(delta){
   const [y,m] = xlDate.slice(0,7).split('-').map(Number);
   const d = new Date(y, m-1+delta, 1);
   const ym = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  const has = xlMine().filter(e=>e.date.slice(0,7)===ym).map(e=>e.date).sort();
+  const has = xlMine().map(e=>e.date).concat(xlMySheets().map(x=>x.date)).filter(d=>d.slice(0,7)===ym).sort();
   xlGoDate(ym === todayStr().slice(0,7) ? todayStr() : (has.length ? has[has.length-1] : ym+'-01'));
 }
 document.getElementById('xlTodayBtn').onclick = ()=> xlGoDate(todayStr());
@@ -4319,6 +4351,12 @@ xlSheetEl.addEventListener('paste', async (e)=>{
   renderXl(true);
 });
 xlSheetEl.addEventListener('click', async (e)=>{
+  const rd = e.target.closest('[data-rawdel]');
+  if(rd){
+    if(!await customConfirm('이 날짜의 가져온 엑셀 원본을 삭제할까요?\n(업무일지 표에 쓴 내용은 그대로예요)', { okLabel:'삭제', danger:true })) return;
+    try{ await ENTRIES.doc(rd.dataset.rawdel).delete(); logAction('엑셀 원본 삭제', xlDate); }catch(err){ alert('삭제 실패: ' + err.message); }
+    return;
+  }
   if(e.target.id === 'xlSearchClose'){ xlSearch=''; document.getElementById('xlSearchInput').value=''; renderXl(true); return; }
   const res = e.target.closest('.xl-res');
   if(res){ xlGoDate(res.dataset.d); return; }
@@ -4667,6 +4705,31 @@ function impParseSheet(name, rows){
   }
   return out;
 }
+// 원본 그대로: 날짜 줄로만 나누고 칸은 손대지 않음
+function impSplitRaw(name, rows){
+  const nameP = impValidMD(impParseDate(name)) ? impParseDate(name) : null;
+  const out = []; let cur = { p: nameP, rows: [], sheet: name }; out.push(cur);
+  rows.forEach(row=>{
+    const r = row.slice(); while(r.length && !r[r.length-1]) r.pop();
+    const filled = r.map((c,i)=> c ? i : -1).filter(i=> i>=0);
+    if(!filled.length){ if(cur.rows.length) cur.rows.push([]); return; }
+    const f0 = filled[0];
+    if(impValidMD(impParseDate(r[f0])) && (filled.length === 1 || (f0 === 0 && !nameP))){
+      const p = impParseDate(r[f0]);
+      if(cur.rows.some(x=>x.length)){ cur = { p, rows: [], sheet: name }; out.push(cur); } else cur.p = p;
+      if(filled.length === 1) return;
+      r[f0] = '';
+    }
+    cur.rows.push(r);
+  });
+  out.forEach(b=>{
+    while(b.rows.length && !b.rows[b.rows.length-1].length) b.rows.pop();
+    while(b.rows.length && !b.rows[0].length) b.rows.shift();
+    const lead = Math.min(...b.rows.filter(r=>r.length).map(r=> r.findIndex(c=>c)));
+    if(lead > 0 && isFinite(lead)) b.rows = b.rows.map(r=> r.slice(lead));
+  });
+  return out;
+}
 function impResolveYear(p, baseYear){
   if(p.y) return p.y;
   // 연도가 없으면: 기준 연도, 단 오늘보다 한 달 이상 미래면 작년으로
@@ -4675,6 +4738,21 @@ function impResolveYear(p, baseYear){
 }
 function impBuildDays(){
   const by = new Map();
+  if(xlImport.mode === 'raw'){
+    const meta = new Map();
+    xlImport.rawBlocks.forEach(b=>{
+      if(!b.p || !b.rows.length) return;
+      const y = impResolveYear(b.p, xlImport.baseYear);
+      const key = `${y}-${impPad(b.p.m)}-${impPad(b.p.d)}`;
+      if(!by.has(key)){ by.set(key, []); meta.set(key, b.sheet); }
+      else by.get(key).push([]);
+      by.get(key).push(...b.rows);
+    });
+    const have = new Set(xlMySheets().map(x=>x.date));
+    xlImport.days = [...by.entries()].sort((a,b)=> a[0]<b[0]?-1:1).map(([date, rows])=>({ date, rows, sheet: meta.get(date), exists: have.has(date), on: true }));
+    if(!xlImport.sel || !by.has(xlImport.sel)) xlImport.sel = xlImport.days.length ? xlImport.days[0].date : null;
+    return;
+  }
   xlImport.blocks.forEach(b=>{
     if(!b.p || !b.rows.length) return;
     const y = impResolveYear(b.p, xlImport.baseYear);
@@ -4690,32 +4768,41 @@ function impRender(){
   const body = document.getElementById('xlImportBody');
   if(!xlImport){ body.innerHTML = ''; return; }
   const days = xlImport.days;
-  const noDate = xlImport.blocks.filter(b=>!b.p && b.rows.length).reduce((n,b)=>n+b.rows.length, 0);
+  const raw = xlImport.mode === 'raw';
+  const modeHtml = `<div class="imp-mode">
+      <label class="${raw?'on':''}"><input type="radio" name="impMode" value="raw" ${raw?'checked':''}> <b>원본 그대로 날짜별 보관</b> (추천)<br><span style="color:var(--ink-soft)">엑셀 모양 그대로 그 날짜 탭 아래에 붙여둬요. 날짜·단어로 검색해서 찾아갈 수 있어요.</span></label>
+      <label class="${raw?'':'on'}"><input type="radio" name="impMode" value="rows" ${raw?'':'checked'}> <b>업무 줄로 나눠 넣기</b><br><span style="color:var(--ink-soft)">분류·제목·내용 칸으로 나눠 업무일지 표에 바로 넣어요.</span></label>
+    </div>`;
+  const noDate = (raw ? xlImport.rawBlocks : xlImport.blocks).filter(b=>!b.p && b.rows.length).reduce((n,b)=>n+b.rows.filter(r=>r.length!==0).length, 0);
   if(!days.length){
-    body.innerHTML = `<div class="imp-sum">날짜를 찾지 못했어요. 탭(시트) 이름을 <b>11.02</b> 처럼 날짜로 해두셨는지 확인해주세요.${noDate ? `<br>(날짜 없이 읽힌 줄 ${noDate}개)` : ''}</div>`;
+    body.innerHTML = modeHtml + `<div class="imp-sum">날짜를 찾지 못했어요. 탭(시트) 이름을 <b>11.02</b> 처럼 날짜로 해두셨는지 확인해주세요.${noDate ? `<br>(날짜 없이 읽힌 줄 ${noDate}개)` : ''}</div>`;
     return;
   }
   const onDays = days.filter(d=>d.on), onRows = onDays.reduce((n,d)=>n+d.rows.length,0);
   const sel = days.find(d=>d.date===xlImport.sel) || days[0];
   const f = (d)=>{ const x = fmtLabel(d); return `${x.year}.${impPad(x.month)}.${impPad(x.day)}(${x.wd})`; };
-  body.innerHTML = `
-    <div class="imp-sum">📄 <b>${escapeHtml(xlImport.fileName)}</b> — <b>${days.length}일</b>, ${days.reduce((n,d)=>n+d.rows.length,0)}줄을 찾았어요.${noDate ? ` <span style="color:var(--ink-soft)">(날짜를 몰라 뺀 줄 ${noDate}개)</span>` : ''}</div>
+  const ncol = raw ? Math.max(1, ...sel.rows.map(r=>r.length)) : 0;
+  const preview = raw
+    ? `<div class="imp-preview xl-raw" style="margin-top:10px;"><table>${sel.rows.slice(0,60).map(r=>'<tr>' + Array.from({length:ncol}, (_,i)=>`<td>${escapeHtml(r[i]||'')}</td>`).join('') + '</tr>').join('')}</table></div>`
+    : `<div class="imp-preview"><table><tr><th style="width:70px">분류</th><th style="width:140px">제목</th><th>내용</th><th style="width:60px">상태</th></tr>
+      ${sel.rows.map(r=>`<tr><td>${escapeHtml(r.place||'공통')}</td><td><b>${escapeHtml(r.category)}</b></td><td>${escapeHtml(r.content)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('')}
+    </table></div>`;
+  body.innerHTML = modeHtml + `
+    <div class="imp-sum">📄 <b>${escapeHtml(xlImport.fileName)}</b> — <b>${days.length}일</b>, ${days.reduce((n,d)=>n+d.rows.filter(r=>!Array.isArray(r) || r.length).length,0)}줄을 찾았어요.${noDate ? ` <span style="color:var(--ink-soft)">(날짜를 몰라 뺀 줄 ${noDate}개)</span>` : ''}</div>
     <div class="imp-opts">
       <label>연도가 없는 날짜는 <input type="number" id="impYear" value="${xlImport.baseYear}" min="2000" max="2100">년으로</label>
       <label><input type="checkbox" id="impAll" ${onDays.length===days.length?'checked':''}> 전체 선택</label>
-      <span style="color:var(--ink-soft)">이미 일지가 있는 날은 처음엔 빼두었어요</span>
+      <span style="color:var(--ink-soft)">${raw ? '같은 날짜 원본이 이미 있으면 새 파일로 바뀌어요' : '이미 일지가 있는 날은 처음엔 빼두었어요'}</span>
     </div>
     <div class="imp-days">${days.map(d=>`
       <div class="imp-day ${d.date===sel.date?'sel':''}" data-d="${d.date}">
         <input type="checkbox" data-on="${d.date}" ${d.on?'checked':''}>
-        <b>${f(d.date)}</b><span class="cnt">${d.rows.length}줄</span>${d.exists?'<span class="warn">이미 일지 있음 → 체크하면 뒤에 추가</span>':''}
+        <b>${f(d.date)}</b><span class="cnt">${d.rows.filter(r=>!Array.isArray(r) || r.length).length}줄${raw && d.sheet ? ' · 탭 ' + escapeHtml(d.sheet) : ''}</span>${d.exists ? (raw ? '<span class="warn">원본 있음 → 새로 바뀜</span>' : '<span class="warn">이미 일지 있음 → 체크하면 뒤에 추가</span>') : ''}
       </div>`).join('')}</div>
-    <div class="imp-preview"><table><tr><th style="width:70px">분류</th><th style="width:140px">제목</th><th>내용</th><th style="width:60px">상태</th></tr>
-      ${sel.rows.map(r=>`<tr><td>${escapeHtml(r.place||'공통')}</td><td><b>${escapeHtml(r.category)}</b></td><td>${escapeHtml(r.content)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('')}
-    </table></div>
+    ${preview}
     <div class="row-btns" style="margin-top:12px;">
       <button id="impCancel">취소</button>
-      <button class="primary" id="impGo" ${onRows?'':'disabled'}>${onDays.length}일 · ${onRows}줄 가져오기</button>
+      <button class="primary" id="impGo" ${onDays.length?'':'disabled'}>${raw ? `${onDays.length}일 원본 보관하기` : `${onDays.length}일 · ${onRows}줄 가져오기`}</button>
     </div>`;
 }
 document.getElementById('xlImportBtn').onclick = ()=>{
@@ -4729,9 +4816,9 @@ document.getElementById('xlImportFile').addEventListener('change', async (e)=>{
   try{
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type:'array', cellDates:true });
-    const blocks = [];
-    wb.SheetNames.forEach(n=>{ const ws = wb.Sheets[n]; if(!ws || !ws['!ref']) return; blocks.push(...impParseSheet(n, impReadSheet(ws))); });
-    xlImport = { fileName: file.name, blocks, baseYear: new Date().getFullYear(), sel: null };
+    const blocks = [], rawBlocks = [];
+    wb.SheetNames.forEach(n=>{ const ws = wb.Sheets[n]; if(!ws || !ws['!ref']) return; const rows = impReadSheet(ws); blocks.push(...impParseSheet(n, rows)); rawBlocks.push(...impSplitRaw(n, rows)); });
+    xlImport = { fileName: file.name, blocks, rawBlocks, mode: 'raw', baseYear: new Date().getFullYear(), sel: null };
     impBuildDays(); impRender();
   }catch(err){ alert('파일을 읽지 못했어요: ' + err.message); }
 });
@@ -4744,6 +4831,27 @@ document.getElementById('xlImportOverlay').addEventListener('click', async (e)=>
   if(e.target.id === 'impAll'){ xlImport.days.forEach(d=> d.on = e.target.checked); impRender(); return; }
   const row = e.target.closest('.imp-day');
   if(row){ xlImport.sel = row.dataset.d; impRender(); return; }
+  if(e.target.id === 'impGo' && xlImport.mode === 'raw'){
+    const days = xlImport.days.filter(d=>d.on && d.rows.length);
+    if(!days.length) return;
+    const btn = e.target; btn.disabled = true; btn.textContent = '보관하는 중…';
+    const owner = xlOwnerUid(), ownerName = xlOwnerName();
+    try{
+      for(let k=0; k<days.length; k+=200){
+        const batch = db.batch();
+        days.slice(k, k+200).forEach(d=> batch.set(ENTRIES.doc(`sheet_${owner}_${d.date}`), {
+          kind:'sheet', date: d.date, ownerUid: owner, ownerName, fileName: xlImport.fileName, sheetName: d.sheet || '',
+          rowsJson: JSON.stringify(d.rows), createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }));
+        await batch.commit();
+      }
+      logAction('엑셀 원본 날짜별 보관', `${xlImport.fileName} · ${days.length}일`);
+      document.getElementById('xlImportOverlay').classList.remove('open');
+      showToast(`${days.length}일치 원본을 날짜별로 보관했어요 ✓`);
+      xlGoDate(days[days.length-1].date);
+    }catch(err){ alert('보관 실패: ' + err.message); btn.disabled = false; btn.textContent = '다시 시도'; }
+    return;
+  }
   if(e.target.id === 'impGo'){
     const days = xlImport.days.filter(d=>d.on && d.rows.length);
     const total = days.reduce((n,d)=>n+d.rows.length, 0);
@@ -4776,6 +4884,7 @@ document.getElementById('xlImportOverlay').addEventListener('click', async (e)=>
   }
 });
 document.getElementById('xlImportOverlay').addEventListener('change', (e)=>{
+  if(e.target.name === 'impMode' && xlImport){ xlImport.mode = e.target.value; xlImport.sel = null; impBuildDays(); impRender(); return; }
   if(e.target.id === 'impYear' && xlImport){ xlImport.baseYear = +e.target.value || new Date().getFullYear(); impBuildDays(); impRender(); }
 });
 /* ---- 엑셀 저장: 그 달 일지를 하루에 시트 하나씩 ---- */
