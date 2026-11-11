@@ -649,6 +649,19 @@
   .xl-add:hover{ color:var(--seal); border-color:var(--seal); }
   .xl-other-banner{ background:var(--amber-soft); border:1px solid var(--amber); color:#8A4B00; border-radius:8px; padding:8px 12px; font-size:12.5px; margin-bottom:10px; }
   select.xl-btn{ max-width:220px; }
+  .imp-opts{ display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; font-size:12.5px; margin:8px 0 10px; }
+  .imp-opts input[type=number]{ width:80px; padding:4px 6px; font-size:13px; }
+  .imp-days{ max-height:220px; overflow:auto; border:1px solid var(--rule-strong); border-radius:8px; }
+  .imp-day{ display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--rule); font-size:13px; cursor:pointer; }
+  .imp-day:last-child{ border-bottom:none; }
+  .imp-day.sel{ background:var(--seal-soft); }
+  .imp-day .cnt{ color:var(--ink-soft); font-size:12px; }
+  .imp-day .warn{ font-size:11px; color:#8A4B00; background:var(--amber-soft); border-radius:6px; padding:1px 6px; }
+  .imp-preview{ margin-top:10px; max-height:260px; overflow:auto; border:1px solid var(--rule-strong); border-radius:8px; }
+  .imp-preview table{ border-collapse:collapse; width:100%; font-size:12.5px; }
+  .imp-preview td, .imp-preview th{ border-bottom:1px solid var(--rule); padding:5px 8px; text-align:left; vertical-align:top; white-space:pre-wrap; }
+  .imp-preview th{ background:var(--slate-soft); position:sticky; top:0; }
+  .imp-sum{ font-size:13px; margin:4px 0; }
   .xl-hint{ font-size:11.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5; }
   .xl-results .xl-res{ display:flex; border-bottom:1px solid var(--rule); font-size:13px; cursor:pointer; }
   .xl-results .xl-res:hover{ background:var(--seal-soft); }
@@ -721,7 +734,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v017</span>
+      <span style="font-size:11px;color:#999">v018</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -756,6 +769,7 @@
       <button class="xl-btn share" id="xlReportBtn" title="미리보기에서 게시글로 복사 / 이미지로 복사 선택">📤 업무보고 내보내기</button>
       <button class="xl-btn" id="xlExcelBtn">📊 엑셀 저장</button>
       <button class="xl-btn" id="xlPlacesBtn">🗂 분류 관리</button>
+      <button class="xl-btn" id="xlImportBtn" title="쓰던 엑셀 업무일지 파일을 가져와요">📥 엑셀 가져오기</button>
       <select class="xl-btn" id="xlOwnerSel" style="display:none;" title="누구의 업무일지를 볼지 선택 (관리자)"></select>
     </div>
     <div class="xl-tabs-wrap">
@@ -1037,6 +1051,15 @@
     <div class="field"><input type="text" id="nameChangeInput" maxlength="12"></div>
     <div class="err" id="nameChangeErr" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:6px;"></div>
     <button class="add-btn" id="nameChangeSaveBtn">저장하기</button>
+  </div>
+</div>
+<!-- 엑셀형: 엑셀 파일 가져오기 -->
+<div class="overlay center-modal" id="xlImportOverlay">
+  <div class="sheet" style="max-width:760px;">
+    <h3>📥 엑셀 업무일지 가져오기 <span class="x" id="xlImportClose">닫기 ✕</span></h3>
+    <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 10px; line-height:1.55;">쓰시던 엑셀 파일을 고르면 <b>탭(시트)마다 그 날짜의 업무일지</b>로 들어가요. 저장 전에 아래에서 먼저 확인할 수 있어요.</p>
+    <input type="file" id="xlImportFile" accept=".xlsx,.xls,.xlsm,.csv" style="margin-bottom:10px; font-size:13px;">
+    <div id="xlImportBody"></div>
   </div>
 </div>
 <!-- 엑셀형: 분류 관리 -->
@@ -4554,6 +4577,207 @@ async function copyPostTable(d){
 }
 document.getElementById('xlReportBtn').onclick = ()=> openReportModal(xlDate);
 document.getElementById('reportPostCopy').onclick = ()=> copyPostTable(reportDate);
+/* ---- 엑셀 파일 가져오기 (쓰던 엑셀 업무일지 → 날짜별 일지) ---- */
+let xlImport = null; // { days:[{key, date|null, md:{m,d}|null, y|null, label, rows:[...] }], sel }
+const IMP_STATUS = [[/^(하는\s*중|진행\s*중|진행)$/,'진행중'],[/^(대기\s*중|대기|보류)$/,'대기중'],[/^(계획|예정)$/,'계획'],[/^(완료|완|끝|done)$/i,'완료']];
+function impStatus(v){ const t = String(v||'').trim(); for(const [re,st] of IMP_STATUS){ if(re.test(t)) return st; } return ''; }
+function impPad(n){ return String(n).padStart(2,'0'); }
+// 글자에서 날짜 찾기 → {y|null, m, d} (짧은 글자에서만: 내용 속 '10/15'를 날짜로 오해하지 않도록)
+function impParseDate(v){
+  if(v instanceof Date && !isNaN(v)) return { y:v.getFullYear(), m:v.getMonth()+1, d:v.getDate() };
+  const s = String(v==null?'':v).trim();
+  if(!s || s.length > 16) return null;
+  let m;
+  if((m = s.match(/^(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/))) return { y:+m[1], m:+m[2], d:+m[3] };
+  if((m = s.match(/^(\d{2})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})(?!\d)/)) && +m[2]<=12) return { y:2000+(+m[1]), m:+m[2], d:+m[3] };
+  if((m = s.match(/^(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})\s*일?\s*[.\s(]*([일월화수목금토](요일)?)?\)?\.?$/))) return { y:null, m:+m[1], d:+m[2] };
+  if((m = s.match(/^(20\d{2})(\d{2})(\d{2})$/))) return { y:+m[1], m:+m[2], d:+m[3] };
+  if((m = s.match(/^(\d{2})(\d{2})(\d{2})$/)) && +m[2]<=12) return { y:2000+(+m[1]), m:+m[2], d:+m[3] };
+  if((m = s.match(/^(\d{2})(\d{2})$/))) return { y:null, m:+m[1], d:+m[2] };
+  return null;
+}
+function impValidMD(p){ return p && p.m>=1 && p.m<=12 && p.d>=1 && p.d<=31; }
+function impReadSheet(ws){
+  const aoa = XLSX.utils.sheet_to_json(ws, { header:1, raw:false, defval:'', blankrows:false });
+  return aoa.map(r=> r.map(c=> String(c==null?'':c).replace(/\r/g,'').trim()));
+}
+// 한 시트 → 날짜별 줄 묶음
+function impParseSheet(name, rows){
+  const out = []; // [{p:{y,m,d}|null, rows:[{place,category,content,note}]}]
+  let cur = { p: impValidMD(impParseDate(name)) ? impParseDate(name) : null, rows: [] };
+  out.push(cur);
+  // 머리줄(제목/내용/분류/상태) 찾기
+  let map = null, startRow = 0;
+  for(let r=0; r<Math.min(rows.length, 8); r++){
+    const row = rows[r]; const m = {};
+    row.forEach((c,i)=>{
+      if(/^(제목|업무|항목|구분\s*\(제목\))$/.test(c)) m.cat = i;
+      else if(/^(내용|업무\s*내용|세부\s*내용|상세)$/.test(c)) m.con = i;
+      else if(/^(분류|구분|매장|지점|장소)$/.test(c)) m.place = i;
+      else if(/^(상태|진행|진행\s*상태|비고)$/.test(c)) m.st = i;
+    });
+    if(m.con != null && (m.cat != null || m.place != null)){ map = m; startRow = r+1; break; }
+  }
+  // 날짜만 적힌 칸(예: 11.02.월) 표시
+  const isDateCell = (c)=> impValidMD(impParseDate(c));
+  if(!map){
+    // 머리줄이 없으면 글자 길이로 추정: 가장 긴 글이 많은 칸 = 내용, 그 왼쪽 = 제목, 그 왼쪽 = 분류
+    const len = [], cnt = [];
+    rows.forEach(row=> row.forEach((c,i)=>{ if(!c || isDateCell(c)) return; len[i]=(len[i]||0)+c.length; cnt[i]=(cnt[i]||0)+1; }));
+    let con = -1, best = -1; // 평균 글자 수가 가장 긴 칸 = 내용 (같으면 오른쪽 칸)
+    len.forEach((v,i)=>{ if(v==null) return; const avg = v / cnt[i]; if(avg >= best){ best = avg; con = i; } });
+    if(con < 0) return out;
+    const used = (i)=> (cnt[i]||0) > 0;
+    let cat = -1; for(let i=con-1; i>=0; i--) if(used(i)){ cat = i; break; }
+    let place = -1; for(let i=cat-1; i>=0; i--) if(used(i)){ place = i; break; }
+    let st = -1;
+    for(let i=con+1; i<len.length; i++){
+      const vals = rows.map(r=>r[i]).filter(Boolean);
+      if(vals.length && vals.filter(v=>impStatus(v)).length >= vals.length*0.5){ st = i; break; }
+    }
+    map = { con, cat: cat>=0?cat:null, place: place>=0?place:null, st: st>=0?st:null };
+  }
+  let lastPlace = '', last = null;
+  for(let r=startRow; r<rows.length; r++){
+    const row = rows[r];
+    const filled = row.map((c,i)=> c ? i : -1).filter(i=> i>=0);
+    if(!filled.length) continue;
+    // 날짜만 있는 줄(또는 맨 앞 칸이 날짜) → 새 날짜 시작
+    const dateIdx = filled.find(i=> isDateCell(row[i]) && i !== map.con);
+    if(dateIdx != null && (filled.length === 1 || dateIdx < (map.cat ?? map.con))){
+      const p = impParseDate(row[dateIdx]);
+      if(cur.rows.length || cur.p){ cur = { p, rows: [] }; out.push(cur); } else cur.p = p;
+      lastPlace = ''; last = null;
+      if(filled.length === 1) continue;
+    }
+    const get = (i)=> (i==null ? '' : (row[i]||''));
+    let place = get(map.place); if(place && isDateCell(place)) place = '';
+    let cat = get(map.cat), con = get(map.con);
+    let st = impStatus(get(map.st));
+    if(map.st == null){ // 상태 칸이 따로 없으면 내용 오른쪽 칸에서 상태 단어 찾기
+      for(let i=map.con+1; i<row.length; i++){ const s = impStatus(row[i]); if(s){ st = s; break; } }
+    }
+    // 내용 오른쪽에 이어 쓴 글(상태 아님)은 내용 뒤에 붙임
+    for(let i=map.con+1; i<row.length; i++){ if(i===map.st) continue; const c = row[i]; if(c && !impStatus(c)) con = con ? con + ' ' + c : c; }
+    if(place) lastPlace = place;
+    if(!cat && !con) continue;
+    if(!cat && con && last && !place){ last.content = last.content ? last.content + '\n' + con : con; if(st && !last.note) last.note = st; continue; } // 내용만 있는 줄 = 윗줄 내용 이어쓰기
+    last = { place: lastPlace, category: cat, content: con, note: st };
+    cur.rows.push(last);
+  }
+  return out;
+}
+function impResolveYear(p, baseYear){
+  if(p.y) return p.y;
+  // 연도가 없으면: 기준 연도, 단 오늘보다 한 달 이상 미래면 작년으로
+  const t = new Date(); const cand = new Date(baseYear, p.m-1, p.d);
+  return (baseYear === t.getFullYear() && cand - t > 31*86400000) ? baseYear - 1 : baseYear;
+}
+function impBuildDays(){
+  const by = new Map();
+  xlImport.blocks.forEach(b=>{
+    if(!b.p || !b.rows.length) return;
+    const y = impResolveYear(b.p, xlImport.baseYear);
+    const key = `${y}-${impPad(b.p.m)}-${impPad(b.p.d)}`;
+    if(!by.has(key)) by.set(key, []);
+    by.get(key).push(...b.rows);
+  });
+  const existing = new Set(xlMine().map(e=>e.date));
+  xlImport.days = [...by.entries()].sort((a,b)=> a[0]<b[0]?-1:1).map(([date, rows])=>({ date, rows, exists: existing.has(date), on: !existing.has(date) }));
+  if(!xlImport.sel || !by.has(xlImport.sel)) xlImport.sel = xlImport.days.length ? xlImport.days[0].date : null;
+}
+function impRender(){
+  const body = document.getElementById('xlImportBody');
+  if(!xlImport){ body.innerHTML = ''; return; }
+  const days = xlImport.days;
+  const noDate = xlImport.blocks.filter(b=>!b.p && b.rows.length).reduce((n,b)=>n+b.rows.length, 0);
+  if(!days.length){
+    body.innerHTML = `<div class="imp-sum">날짜를 찾지 못했어요. 탭(시트) 이름을 <b>11.02</b> 처럼 날짜로 해두셨는지 확인해주세요.${noDate ? `<br>(날짜 없이 읽힌 줄 ${noDate}개)` : ''}</div>`;
+    return;
+  }
+  const onDays = days.filter(d=>d.on), onRows = onDays.reduce((n,d)=>n+d.rows.length,0);
+  const sel = days.find(d=>d.date===xlImport.sel) || days[0];
+  const f = (d)=>{ const x = fmtLabel(d); return `${x.year}.${impPad(x.month)}.${impPad(x.day)}(${x.wd})`; };
+  body.innerHTML = `
+    <div class="imp-sum">📄 <b>${escapeHtml(xlImport.fileName)}</b> — <b>${days.length}일</b>, ${days.reduce((n,d)=>n+d.rows.length,0)}줄을 찾았어요.${noDate ? ` <span style="color:var(--ink-soft)">(날짜를 몰라 뺀 줄 ${noDate}개)</span>` : ''}</div>
+    <div class="imp-opts">
+      <label>연도가 없는 날짜는 <input type="number" id="impYear" value="${xlImport.baseYear}" min="2000" max="2100">년으로</label>
+      <label><input type="checkbox" id="impAll" ${onDays.length===days.length?'checked':''}> 전체 선택</label>
+      <span style="color:var(--ink-soft)">이미 일지가 있는 날은 처음엔 빼두었어요</span>
+    </div>
+    <div class="imp-days">${days.map(d=>`
+      <div class="imp-day ${d.date===sel.date?'sel':''}" data-d="${d.date}">
+        <input type="checkbox" data-on="${d.date}" ${d.on?'checked':''}>
+        <b>${f(d.date)}</b><span class="cnt">${d.rows.length}줄</span>${d.exists?'<span class="warn">이미 일지 있음 → 체크하면 뒤에 추가</span>':''}
+      </div>`).join('')}</div>
+    <div class="imp-preview"><table><tr><th style="width:70px">분류</th><th style="width:140px">제목</th><th>내용</th><th style="width:60px">상태</th></tr>
+      ${sel.rows.map(r=>`<tr><td>${escapeHtml(r.place||'공통')}</td><td><b>${escapeHtml(r.category)}</b></td><td>${escapeHtml(r.content)}</td><td>${escapeHtml(r.note)}</td></tr>`).join('')}
+    </table></div>
+    <div class="row-btns" style="margin-top:12px;">
+      <button id="impCancel">취소</button>
+      <button class="primary" id="impGo" ${onRows?'':'disabled'}>${onDays.length}일 · ${onRows}줄 가져오기</button>
+    </div>`;
+}
+document.getElementById('xlImportBtn').onclick = ()=>{
+  if(typeof XLSX === 'undefined' || !XLSX.read){ alert('엑셀 기능을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
+  xlImport = null; document.getElementById('xlImportFile').value = ''; impRender();
+  document.getElementById('xlImportOverlay').classList.add('open');
+};
+document.getElementById('xlImportClose').onclick = ()=> document.getElementById('xlImportOverlay').classList.remove('open');
+document.getElementById('xlImportFile').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0]; if(!file) return;
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array', cellDates:true });
+    const blocks = [];
+    wb.SheetNames.forEach(n=>{ const ws = wb.Sheets[n]; if(!ws || !ws['!ref']) return; blocks.push(...impParseSheet(n, impReadSheet(ws))); });
+    xlImport = { fileName: file.name, blocks, baseYear: new Date().getFullYear(), sel: null };
+    impBuildDays(); impRender();
+  }catch(err){ alert('파일을 읽지 못했어요: ' + err.message); }
+});
+document.getElementById('xlImportOverlay').addEventListener('click', async (e)=>{
+  if(e.target.id === 'xlImportOverlay'){ e.currentTarget.classList.remove('open'); return; }
+  if(!xlImport) return;
+  if(e.target.id === 'impCancel'){ document.getElementById('xlImportOverlay').classList.remove('open'); return; }
+  const cb = e.target.closest('input[data-on]');
+  if(cb){ const d = xlImport.days.find(x=>x.date===cb.dataset.on); if(d) d.on = cb.checked; impRender(); return; }
+  if(e.target.id === 'impAll'){ xlImport.days.forEach(d=> d.on = e.target.checked); impRender(); return; }
+  const row = e.target.closest('.imp-day');
+  if(row){ xlImport.sel = row.dataset.d; impRender(); return; }
+  if(e.target.id === 'impGo'){
+    const days = xlImport.days.filter(d=>d.on && d.rows.length);
+    const total = days.reduce((n,d)=>n+d.rows.length, 0);
+    if(!total) return;
+    const btn = e.target; btn.disabled = true; btn.textContent = '가져오는 중…';
+    const owner = xlOwnerUid(), ownerName = xlOwnerName();
+    const items = [];
+    days.forEach(d=>{ const base = Date.now(); d.rows.forEach((r,i)=> items.push({
+      date: d.date, category: r.category, content: r.content, note: r.note, place: r.place || '',
+      inspection:'', dueDate:'', ownerUid: owner, ownerName, seq: base + i, importedFrom: xlImport.fileName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    })); });
+    try{
+      for(let k=0; k<items.length; k+=400){
+        const batch = db.batch();
+        items.slice(k, k+400).forEach(it=> batch.set(ENTRIES.doc(), it));
+        await batch.commit();
+      }
+      // 새 분류 이름은 분류 목록에 추가 (내 일지일 때만)
+      if(!xlIsOther()){
+        const list = xlPlaces().slice(); let add = false;
+        items.forEach(it=>{ if(it.place && !list.includes(it.place)){ list.push(it.place); add = true; } });
+        if(add) await savePrefs({ places: list });
+      }
+      logAction('엑셀 업무일지 가져오기', `${xlImport.fileName} · ${days.length}일 ${items.length}줄`);
+      document.getElementById('xlImportOverlay').classList.remove('open');
+      showToast(`${days.length}일 · ${items.length}줄을 가져왔어요 ✓`);
+      xlGoDate(days[days.length-1].date);
+    }catch(err){ alert('가져오기 실패: ' + err.message); btn.disabled = false; btn.textContent = '다시 시도'; }
+  }
+});
+document.getElementById('xlImportOverlay').addEventListener('change', (e)=>{
+  if(e.target.id === 'impYear' && xlImport){ xlImport.baseYear = +e.target.value || new Date().getFullYear(); impBuildDays(); impRender(); }
+});
 /* ---- 엑셀 저장: 그 달 일지를 하루에 시트 하나씩 ---- */
 document.getElementById('xlExcelBtn').onclick = ()=>{
   if(typeof XLSX === 'undefined' || !XLSX.utils){ alert('엑셀 기능을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); return; }
