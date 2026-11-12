@@ -424,6 +424,20 @@
   .cl-cal-cell.today{ background:var(--seal-soft); }
   .cl-cal-cell.dragover{ outline:2px dashed var(--seal); outline-offset:-2px; }
   .cl-cal-daynum{ font-size:13px; font-weight:800; color:var(--ink); margin-bottom:2px; }
+  .cl-cal-cell[data-date]{ position:relative; cursor:pointer; }
+  .cl-cal-cell[data-date]:hover{ background:#F7FAFF; }
+  .cl-cal-cell.today[data-date]:hover{ background:#D3E3FD; }
+  .cl-cal-add{ position:absolute; top:4px; right:5px; width:20px; height:20px; border-radius:50%; border:1px solid var(--seal); background:#fff; color:var(--seal); font-size:14px; line-height:17px; text-align:center; font-weight:700; opacity:0; transition:opacity .12s; pointer-events:none; }
+  .cl-cal-cell[data-date]:hover .cl-cal-add{ opacity:1; }
+  .cl-quick{ position:fixed; z-index:150; width:280px; background:#fff; border:1px solid var(--rule-strong); border-radius:12px; box-shadow:0 8px 28px rgba(31,35,40,.18); padding:12px; display:none; }
+  .cl-quick.open{ display:block; }
+  .cl-quick h4{ margin:0 0 8px; font-size:13.5px; display:flex; justify-content:space-between; align-items:center; }
+  .cl-quick h4 span{ font-weight:400; color:var(--ink-soft); cursor:pointer; font-size:12px; }
+  .cl-quick input[type=text]{ padding:8px 10px; font-size:14px; }
+  .cl-quick .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; font-size:12.5px; color:var(--ink-soft); }
+  .cl-quick .row button{ background:var(--ink); color:#fff; border:none; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .cl-cal-hint{ font-size:11.5px; color:var(--ink-soft); margin:6px 2px 0; }
+  @media (max-width: 640px){ .cl-quick{ left:16px !important; right:16px; width:auto; top:30% !important; } }
   .cl-pill{
     font-size:12px; padding:3px 8px; border-radius:8px; background:var(--seal-soft); color:#1E40AF;
     cursor:grab; white-space:normal; word-break:break-word; overflow-wrap:anywhere; max-width:100%; font-weight:600; line-height:1.35;
@@ -744,7 +758,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v022</span>
+      <span style="font-size:11px;color:#999">v023</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -889,6 +903,7 @@
       </div>
     </div>
     <div class="cl-calendar-grid" id="clCalendarGrid"></div>
+    <div class="cl-cal-hint">날짜 칸을 누르면 그 날짜에 할일을 바로 추가할 수 있어요</div>
   </div>
   <div id="clView-daily" class="cl-view" style="display:none;">
     <p class="cl-hint">날짜를 누르면 그 날짜에 <b>매달 반복할 일</b>을 적을 수 있어요. (단발성 할 일은 '할일' 탭에 적으세요)</p>
@@ -1144,6 +1159,14 @@
       <button class="share-btn" id="reportPostCopy">📋 게시글로 복사</button>
       <button class="primary" id="reportImgCopy">🖼 이미지로 복사</button>
     </div>
+  </div>
+</div>
+<div class="cl-quick" id="clQuick">
+  <h4><b id="clQuickTitle">할일 추가</b><span id="clQuickClose">닫기 ✕</span></h4>
+  <input type="text" id="clQuickText" placeholder="할일 입력 후 Enter">
+  <div class="row">
+    <label><input type="checkbox" id="clQuickDeadline" checked> 이 날을 마감일로</label>
+    <button id="clQuickAddBtn">추가</button>
   </div>
 </div>
 <div class="copied-toast" id="copiedToast">복사되었습니다 ✓</div>
@@ -3001,6 +3024,46 @@ document.getElementById('todoAddBtn').onclick = async ()=>{
     logAction('할일 추가', text);
   }catch(err){ alert('추가 실패: ' + err.message); }
 };
+/* 달력 날짜 칸을 눌러 그 날짜에 할일 바로 추가 */
+let clQuickDate = null;
+function openClQuickAdd(cell){
+  clQuickDate = cell.dataset.date;
+  const pop = document.getElementById('clQuick');
+  const {month, day, wd} = fmtLabel(clQuickDate);
+  document.getElementById('clQuickTitle').textContent = `${month}월 ${day}일 (${wd}) 할일 추가`;
+  document.getElementById('clQuickText').value = '';
+  document.getElementById('clQuickDeadline').checked = true;
+  pop.classList.add('open');
+  const r = cell.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  let left = r.left + r.width/2 - w/2, top = r.bottom + 6;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  if(top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  setTimeout(()=> document.getElementById('clQuickText').focus(), 0);
+}
+function closeClQuickAdd(){ document.getElementById('clQuick').classList.remove('open'); clQuickDate = null; }
+async function clQuickSubmit(){
+  const inp = document.getElementById('clQuickText');
+  const text = inp.value.trim();
+  if(!text || !clQuickDate) return;
+  const asDeadline = document.getElementById('clQuickDeadline').checked;
+  try{
+    await TODOS.add({ ownerUid: currentUser.uid, ownerName: currentUser.displayName, text, deadline: asDeadline ? clQuickDate : '', calDate: clQuickDate, done:false, seq: Date.now() });
+    logAction('할일 추가(달력)', `${clQuickDate} ${text}`);
+    inp.value = ''; inp.focus();   // 같은 날짜에 이어서 더 추가 가능
+    showToast('할일을 추가했어요 ✓');
+  }catch(err){ alert('추가 실패: ' + err.message); }
+}
+document.getElementById('clQuickAddBtn').onclick = clQuickSubmit;
+document.getElementById('clQuickClose').onclick = closeClQuickAdd;
+document.getElementById('clQuickText').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.isComposing){ e.preventDefault(); clQuickSubmit(); }
+  if(e.key === 'Escape') closeClQuickAdd();
+});
+document.addEventListener('mousedown', (e)=>{
+  const pop = document.getElementById('clQuick');
+  if(pop.classList.contains('open') && !pop.contains(e.target) && !e.target.closest('.cl-cal-cell[data-date]')) closeClQuickAdd();
+});
 async function seedDefaultTemplatesIfNeeded(){
   seedAttempted = true;
   return;
@@ -3075,13 +3138,13 @@ function renderChecklistCalendar(){
     const items = (itemsByDay[d]||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
     const pills = items.map(it=>`<span class="cl-pill ${it.done?'done':''}" draggable="true" data-id="${it.id}" title="${escapeAttr(it.text)}">${escapeHtml(it.text)}</span>`).join('');
     const todoPills = (todosByDay[d]||[]).map(t=>`<span class="cl-pill todo ${t.done?'done':''}" draggable="true" data-id="${t.id}" data-type="todo" title="${escapeAttr('할일: '+t.text + (t.deadline ? (' (마감 '+t.deadline+')') : '') + (t.done ? ' — 완료' : ''))}">${escapeHtml(t.text)}</span>`).join('');
-    html += `<div class="cl-cal-cell ${isToday?'today':''}" data-date="${dateStr}"><span class="cl-cal-daynum">${d}</span>${pills}${todoPills}</div>`;
+    html += `<div class="cl-cal-cell ${isToday?'today':''}" data-date="${dateStr}" title="눌러서 이 날짜에 할일 추가"><span class="cl-cal-daynum">${d}</span><span class="cl-cal-add">+</span>${pills}${todoPills}</div>`;
   }
   grid.innerHTML = html;
 }
 document.getElementById('clCalendarGrid').addEventListener('click', async (e)=>{
   const pill = e.target.closest('.cl-pill');
-  if(!pill) return;
+  if(!pill){ const cell = e.target.closest('.cl-cal-cell[data-date]'); if(cell) openClQuickAdd(cell); return; }
   if(pill.dataset.type==='todo'){
     const id = pill.dataset.id;
     const t = allTodos.find(x=>x.id===id);
