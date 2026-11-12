@@ -744,7 +744,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v021</span>
+      <span style="font-size:11px;color:#999">v022</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -1596,7 +1596,8 @@ async function autoCarryOverUnfinished(){
     e.date < today && e.date >= cfg.activatedOn &&
     e.ownerUid===currentUser.uid &&
     (e.note==='진행중' || e.note==='대기중' || e.note==='계획') &&
-    !e.carriedOverDone
+    !e.carriedOverDone &&
+    !e.importedFrom   // 엑셀 파일로 가져온 업무는 다음 날로 넘기지 않음
   );
   if(!toCopy.length) return;
   const planSeq = makeSeqPlanner(today, currentUser.uid);
@@ -4391,7 +4392,7 @@ async function convertRawSheets(sheets, silent){
     p.items.forEach((it,i)=> ops.push(b=> b.set(ENTRIES.doc(), {
       date: p.sh.date, category: it.category, content: it.content, note: it.note, place: it.place || '',
       inspection:'', dueDate:'', ownerUid: p.sh.ownerUid || owner, ownerName: p.sh.ownerName || ownerName,
-      seq: base + i, importedFrom: p.sh.fileName || '', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      seq: base + i, importedFrom: p.sh.fileName || '엑셀', carriedOverDone: true, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     })));
     if(p.items.length) ops.push(b=> b.delete(ENTRIES.doc(p.sh.id)));
   });
@@ -4920,7 +4921,7 @@ document.getElementById('xlImportOverlay').addEventListener('click', async (e)=>
     const items = [];
     days.forEach(d=>{ const base = Date.now(); d.rows.forEach((r,i)=> items.push({
       date: d.date, category: r.category, content: r.content, note: r.note, place: r.place || '',
-      inspection:'', dueDate:'', ownerUid: owner, ownerName, seq: base + i, importedFrom: xlImport.fileName,
+      inspection:'', dueDate:'', ownerUid: owner, ownerName, seq: base + i, importedFrom: xlImport.fileName || '엑셀', carriedOverDone: true,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     })); });
     try{
