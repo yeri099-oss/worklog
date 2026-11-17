@@ -758,7 +758,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v024</span>
+      <span style="font-size:11px;color:#999">v025</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -1650,10 +1650,11 @@ async function autoCarryOverUnfinished(){
     carryOverCheckedFor = null; // 실패 시 다음 스냅샷에서 재시도
   }
 }
-/* 새 업무 기본 배치: 진행중(맨 위) → 계획/기타/완료(중간) → 대기중(맨 아래)
+/* 새 업무 기본 배치: 완료 → 진행중 → 대기중 → 계획 순서, 같은 상태가 있으면 그 묶음의 맨 끝
    - 추가 시점에만 위치를 정하고, 이후 드래그로 바꾼 순서는 그대로 유지 */
 const freshEntryIds = new Set(); // 이번에 새로 만든 줄 (상태를 처음 고르면 그 상태 묶음으로 자리 이동)
-function statusRank(note){ return note==='진행중' ? 0 : note==='대기중' ? 2 : 1; }
+// 기본 배치 순서: 완료 → 진행중 → 대기중 → 계획 → (상태 없음)
+function statusRank(note){ return note==='완료' ? 0 : note==='진행중' ? 1 : note==='대기중' ? 2 : note==='계획' ? 3 : 4; }
 function makeSeqPlanner(date, ownerUid, opts){
   opts = opts || {};
   const list = allEntries.filter(e=>e.date===date && e.ownerUid===ownerUid && e.id !== opts.excludeId &&
@@ -1666,7 +1667,7 @@ function makeSeqPlanner(date, ownerUid, opts){
     let same = -1; // 같은 상태가 이미 있으면 그 묶음의 맨 끝에
     if(note) list.forEach((e,i)=>{ if(e.note === note) same = i; });
     if(same >= 0) pos = same + 1;
-    else list.forEach((e,i)=>{ if(e.rank <= rank) pos = i+1; }); // 없으면 순위 규칙(진행중 위 · 대기중 아래)
+    else list.forEach((e,i)=>{ if(e.rank <= rank) pos = i+1; }); // 없으면 순서 규칙(완료→진행중→대기중→계획)
     let seq;
     if(!list.length) seq = Date.now();
     else if(pos === 0) seq = list[0].seq - 1;
