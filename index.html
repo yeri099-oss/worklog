@@ -758,7 +758,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v023</span>
+      <span style="font-size:11px;color:#999">v024</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -1652,21 +1652,27 @@ async function autoCarryOverUnfinished(){
 }
 /* 새 업무 기본 배치: 진행중(맨 위) → 계획/기타/완료(중간) → 대기중(맨 아래)
    - 추가 시점에만 위치를 정하고, 이후 드래그로 바꾼 순서는 그대로 유지 */
+const freshEntryIds = new Set(); // 이번에 새로 만든 줄 (상태를 처음 고르면 그 상태 묶음으로 자리 이동)
 function statusRank(note){ return note==='진행중' ? 0 : note==='대기중' ? 2 : 1; }
-function makeSeqPlanner(date, ownerUid){
-  const list = allEntries.filter(e=>e.date===date && e.ownerUid===ownerUid)
-    .map(e=>({ seq: e.seq||0, rank: statusRank(e.note) }))
+function makeSeqPlanner(date, ownerUid, opts){
+  opts = opts || {};
+  const list = allEntries.filter(e=>e.date===date && e.ownerUid===ownerUid && e.id !== opts.excludeId &&
+      (opts.place === undefined || (e.place||'') === opts.place))
+    .map(e=>({ seq: e.seq||0, rank: statusRank(e.note), note: e.note||'' }))
     .sort((a,b)=> a.seq-b.seq);
   return function(note){
     const rank = statusRank(note);
-    let pos = 0; // 같은 순위 이하인 마지막 항목 바로 뒤에 삽입
-    list.forEach((e,i)=>{ if(e.rank <= rank) pos = i+1; });
+    let pos = 0;
+    let same = -1; // 같은 상태가 이미 있으면 그 묶음의 맨 끝에
+    if(note) list.forEach((e,i)=>{ if(e.note === note) same = i; });
+    if(same >= 0) pos = same + 1;
+    else list.forEach((e,i)=>{ if(e.rank <= rank) pos = i+1; }); // 없으면 순위 규칙(진행중 위 · 대기중 아래)
     let seq;
     if(!list.length) seq = Date.now();
     else if(pos === 0) seq = list[0].seq - 1;
     else if(pos === list.length) seq = Math.max(list[pos-1].seq + 1, Date.now());
     else seq = (list[pos-1].seq + list[pos].seq) / 2;
-    list.splice(pos, 0, { seq, rank });
+    list.splice(pos, 0, { seq, rank, note: note||'' });
     return seq;
   };
 }
@@ -2046,7 +2052,14 @@ document.getElementById('statusPopup').addEventListener('click', async (e)=>{
   const id = statusPopupId;
   if(!id){ closeStatusPopup(); return; }
   const v = opt.dataset.v;
-  try{ await ENTRIES.doc(id).update({ note: v }); logAction('상태 변경', v || '없음'); }
+  const upd = { note: v };
+  const en = allEntries.find(x=>x.id===id);
+  if(en && v && freshEntryIds.has(id) && en.note !== v){
+    upd.seq = makeSeqPlanner(en.date, en.ownerUid, { excludeId: id, place: en.place||'' })(v);
+    en.seq = upd.seq;
+  }
+  if(en) en.note = v;
+  try{ await ENTRIES.doc(id).update(upd); logAction('상태 변경', v || '없음'); }
   catch(err){ alert('변경 실패: ' + err.message); }
   closeStatusPopup();
 });
@@ -4251,6 +4264,7 @@ function xlCreateFromDraft(row, extra){
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }, extra || {});
   allEntries.push(Object.assign({ id: ref.id }, data)); // 서버 응답 전에도 화면에 바로 보이도록
+  freshEntryIds.add(ref.id);
   ref.set(data).then(()=> logAction('업무일지 추가(엑셀형)', `${xlDate} ${data.place} ${data.category}`))
     .catch(err=> alert('저장 실패: ' + err.message));
   return ref.id;
