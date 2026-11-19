@@ -758,7 +758,7 @@
       <h1>업무일지</h1>
     </div>
     <div class="user-bar">
-      <span style="font-size:11px;color:#999">v025</span>
+      <span style="font-size:11px;color:#999">v026</span>
       <span id="userIdLabel"></span>
       <span class="role-tag" id="userRoleLabel"></span>
       <span class="sync-dot off" id="syncDot"><i></i><span id="syncText">연결중</span></span>
@@ -2481,6 +2481,8 @@ function showLogin(errMsg){
   document.getElementById('loginErr').textContent = errMsg || '';
 }
 function enterApp(){
+  ownerFilter = currentUser.uid; // 관리자도 처음엔 '내 일지'로 (전체는 선택 상자에서)
+  xlOwner = null;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appRoot').style.display = 'block';
   document.getElementById('userIdLabel').textContent = currentUser.displayName;
